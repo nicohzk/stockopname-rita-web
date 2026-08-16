@@ -1,8 +1,11 @@
+import { Separator } from "@/components/ui/separator";
+
 export default function DashboardPage() {
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold">Dashboard</h1>
       <p>Welcome to the dashboard page!</p>
+      <Separator className="mt-4"/>
     </div>
   )
 }
