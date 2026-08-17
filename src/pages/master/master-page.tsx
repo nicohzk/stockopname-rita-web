@@ -1,7 +1,7 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import ProductTabs from "./product-tabs";
-import { CategoriesTabs } from "./categories-tabs";
-import DepartmentsTabs from "./department-tabs";
+import ProductTabs from "./product/product-tabs";
+import { CategoriesTabs } from "./category/categories-tabs";
+import DepartmentsTabs from "./department/department-tabs";
 import { Separator } from "@/components/ui/separator";
 
 export default function MasterPage() {

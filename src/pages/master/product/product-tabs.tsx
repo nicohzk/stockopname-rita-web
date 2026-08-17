@@ -6,6 +6,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { TabsContent } from "@/components/ui/tabs";
+import ProductTable from "./product-table";
+import { products } from "@/data/products";
+import { columns } from "./product-table-column";
 
 export default function ProductTabs() {
   return (
@@ -19,7 +22,7 @@ export default function ProductTabs() {
           </CardDescription>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          add button, search, filter, table, pagination nanti disini.
+          <ProductTable columns={columns} data={products} />
         </CardContent>
       </Card>
     </TabsContent>
