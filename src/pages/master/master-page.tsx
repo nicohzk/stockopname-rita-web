@@ -1,6 +1,6 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProductTabs from "./product/product-tabs";
-import { CategoriesTabs } from "./category/categories-tabs";
+import { CategoryTabs } from "./category/category-tabs";
 import DepartmentsTabs from "./department/department-tabs";
 import { Separator } from "@/components/ui/separator";
 
@@ -20,7 +20,7 @@ export default function MasterPage() {
           <TabsTrigger className="text-base font-semibold" value="departments">Departments</TabsTrigger>
         </TabsList>
         <ProductTabs/>
-        <CategoriesTabs/>
+        <CategoryTabs/>
         <DepartmentsTabs/>
       </Tabs>
     </div>

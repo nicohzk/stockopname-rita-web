@@ -6,6 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
 import { useState } from "react";
 import { features, type DataTableFeatures } from "@/types/data-table-features";
 import {
@@ -16,14 +17,14 @@ import {
 } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import DepartmentAddButton from "./department-add-btn";
+import CategoryAddButton from "./category-add-btn";
 
 interface DataTableProps<TData extends RowData> {
   columns: ColumnDef<DataTableFeatures, TData>[];
   data: TData[];
 }
 
-export default function DepartmentTable<TData extends RowData>({
+export default function CategoryTable<TData extends RowData>({
   columns,
   data,
 }: DataTableProps<TData>) {
@@ -56,7 +57,7 @@ export default function DepartmentTable<TData extends RowData>({
           }
           className="max-w-sm"
         />
-        <DepartmentAddButton />
+        <CategoryAddButton />
       </div>
       <div className="rounded-md border">
         <Table className="table-fixed">
