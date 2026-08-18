@@ -14,10 +14,10 @@ export default function MasterPage() {
       </div>
       
       <Tabs defaultValue="products" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger className="text-base font-semibold" value="products">Products</TabsTrigger>
-          <TabsTrigger className="text-base font-semibold" value="categories">Categories</TabsTrigger>
-          <TabsTrigger className="text-base font-semibold" value="departments">Departments</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3" variant="line">
+          <TabsTrigger className="text-lg font-semibold " value="products">Products</TabsTrigger>
+          <TabsTrigger className="text-lg font-semibold" value="categories">Categories</TabsTrigger>
+          <TabsTrigger className="text-lg font-semibold" value="departments">Departments</TabsTrigger>
         </TabsList>
         <ProductTabs/>
         <CategoryTabs/>
