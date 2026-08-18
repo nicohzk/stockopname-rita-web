@@ -2,6 +2,7 @@ import { type SubmitEvent } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function DepartmentAddForm() {
   const onSubmit = (e: SubmitEvent<HTMLFormElement>) => {
@@ -11,7 +12,7 @@ export default function DepartmentAddForm() {
   };
 
   return (
-    <form className="space-y-4" onSubmit={onSubmit}>
+    <form className="space-y-4 w-full min-w-0" onSubmit={onSubmit}>
       <div className="space-y-2">
         <Label htmlFor="name">Name</Label>
         <Input id="name" name="name" />
@@ -24,7 +25,7 @@ export default function DepartmentAddForm() {
 
       <div className="space-y-2">
         <Label htmlFor="desc">Description</Label>
-        <Input id="desc" name="desc" />
+        <Textarea name="desc" id="desc" />
       </div>
 
       <Button type="submit" className="w-full">
