@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export default function ProductTableButton(product: any) {
+export default function DepartmentTableButton(department: any) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger

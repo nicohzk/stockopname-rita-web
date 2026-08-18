@@ -6,6 +6,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { TabsContent } from "@/components/ui/tabs";
+import DepartmentTable from "./department-table";
+import { departmentsDummy } from "@/data/department";
+import { columns } from "./department-table-column";
 
 export default function DepartmentsTabs() {
   return (
@@ -18,7 +21,7 @@ export default function DepartmentsTabs() {
           </CardDescription>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          add button, search, filter, table, pagination nanti disini.
+          <DepartmentTable columns={columns} data={departmentsDummy} />
         </CardContent>
       </Card>
     </TabsContent>

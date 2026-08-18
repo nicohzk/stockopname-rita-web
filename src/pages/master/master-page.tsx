@@ -7,10 +7,10 @@ import { Separator } from "@/components/ui/separator";
 export default function MasterPage() {
   return (
     <div className="p-4">
-      <div className="mb-4">
+      <div className="mb-3">
         <h1 className="text-2xl font-bold">Master Data</h1>
         <p>Welcome to the master data page!</p>
-        <Separator className="mt-4"/>
+        <Separator className="mt-2"/>
       </div>
       
       <Tabs defaultValue="products" className="w-full">

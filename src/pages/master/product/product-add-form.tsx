@@ -59,7 +59,7 @@ export default function ProductAddForm() {
         <Label htmlFor="category">Category</Label>
         <Combobox
           items={categoryItems}
-          itemToStringValue={(item) => item.label}
+          itemToStringValue={(item: { value: string; label: string }) => item.label}
         >
           <ComboboxInput placeholder="Select a category" name="category" />
           <ComboboxContent>
@@ -79,7 +79,7 @@ export default function ProductAddForm() {
         <Label htmlFor="department">Department</Label>
         <Combobox
           items={departmentItems}
-          itemToStringValue={(item) => item.label}
+          itemToStringValue={(item: { value: string; label: string }) => item.label}
         >
           <ComboboxInput placeholder="Select a department" name="department" />
           <ComboboxContent>

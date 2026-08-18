@@ -5,7 +5,7 @@ export default function DashboardPage() {
     <div className="p-4">
       <h1 className="text-2xl font-bold">Dashboard</h1>
       <p>Welcome to the dashboard page!</p>
-      <Separator className="mt-4"/>
+      <Separator className="mt-2"/>
     </div>
   )
 }

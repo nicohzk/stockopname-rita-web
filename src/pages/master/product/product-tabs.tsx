@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/card";
 import { TabsContent } from "@/components/ui/tabs";
 import ProductTable from "./product-table";
-import { products } from "@/data/products";
+import { productsDummy } from "@/data/products";
 import { columns } from "./product-table-column";
 
 export default function ProductTabs() {
@@ -22,7 +22,7 @@ export default function ProductTabs() {
           </CardDescription>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          <ProductTable columns={columns} data={products} />
+          <ProductTable columns={columns} data={productsDummy} />
         </CardContent>
       </Card>
     </TabsContent>

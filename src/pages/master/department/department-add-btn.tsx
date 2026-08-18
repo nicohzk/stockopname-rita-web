@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import ProductAddForm from "./product-add-form";
 import {
   Dialog,
   DialogContent,
@@ -7,21 +6,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator"
+import DepartmentAddForm from "./department-add-form";
+import { Separator } from "@/components/ui/separator";
 
-export default function ProductAddButton() {
+export default function DepartmentAddButton() {
   return (
     <Dialog>
       <DialogTrigger>
-        <Button>Add Product</Button>
+        <Button>Add Department</Button>
       </DialogTrigger>
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Product</DialogTitle>
+          <DialogTitle>Add Department</DialogTitle>
           <Separator></Separator>
         </DialogHeader>
-        <ProductAddForm />
+        <DepartmentAddForm />
       </DialogContent>
     </Dialog>
   );
