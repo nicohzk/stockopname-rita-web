@@ -8,11 +8,11 @@ const columnHelper = createColumnHelper<DataTableFeatures, Product>();
 export const columns = columnHelper.columns([
   columnHelper.accessor("id", {
     header: "Product ID",
-    size: 100,
+    size: 90,
   }),
   columnHelper.accessor("barcode", {
     header: "Barcode",
-    size: 150,
+    size: 130,
   }),
   columnHelper.accessor("name", {
     header: "Name",
