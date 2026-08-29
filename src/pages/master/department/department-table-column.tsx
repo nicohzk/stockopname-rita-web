@@ -1,5 +1,5 @@
 import { createColumnHelper } from "@tanstack/react-table";
-import type { DataTableFeatures } from "@/types/data-table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 import DepartmentTableButton from "./department-table-btn";
 import type { Department } from "@/types/department";
 

@@ -1,5 +1,5 @@
 import { createColumnHelper } from "@tanstack/react-table";
-import type { DataTableFeatures } from "@/types/data-table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { Product } from "@/types/product";
 import ProductTableButton from "./product-table-btn";
 
@@ -36,7 +36,7 @@ export const columns = columnHelper.columns([
   }),
   columnHelper.accessor("lastUpdate", {
     header: "Last Update",
-    size: 130,
+    size: 100,
   }),
   columnHelper.display({
     id: "actions",
@@ -44,7 +44,6 @@ export const columns = columnHelper.columns([
     size: 60,
     cell: ({ row }) => {
       const product = row.original;
-
       return (
         <div className="flex justify-center">
           <ProductTableButton product={product}/>

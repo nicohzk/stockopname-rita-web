@@ -15,9 +15,9 @@ export default function MasterPage() {
       
       <Tabs defaultValue="products" className="w-full">
         <TabsList className="grid w-full grid-cols-3" variant="line">
-          <TabsTrigger className="text-lg font-semibold " value="products">Products</TabsTrigger>
-          <TabsTrigger className="text-lg font-semibold" value="categories">Categories</TabsTrigger>
-          <TabsTrigger className="text-lg font-semibold" value="departments">Departments</TabsTrigger>
+          <TabsTrigger className="text-md font-semibold " value="products">Products</TabsTrigger>
+          <TabsTrigger className="text-md font-semibold" value="categories">Categories</TabsTrigger>
+          <TabsTrigger className="text-md font-semibold" value="departments">Departments</TabsTrigger>
         </TabsList>
         <ProductTabs/>
         <CategoryTabs/>

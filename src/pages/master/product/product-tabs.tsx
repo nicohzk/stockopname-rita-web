@@ -17,11 +17,12 @@ export default function ProductTabs() {
         <CardHeader>
           <CardTitle>Products</CardTitle>
           <CardDescription>
-            View your products and manage your inventory. Add new products,
-            update existing ones, and track stock levels.
+            Kelola data master bagian produk untuk kebutuhan stock opname.
+            Tambahkan, perbarui, dan kelola data yang digunakan dalam
+            pelaksanaan setiap sesi stock opname.
           </CardDescription>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className="text-sm">
           <ProductTable columns={columns} data={productsDummy} />
         </CardContent>
       </Card>

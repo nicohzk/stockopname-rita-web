@@ -17,10 +17,12 @@ export default function DepartmentsTabs() {
         <CardHeader>
           <CardTitle>Departments</CardTitle>
           <CardDescription>
-            Manage your departments and organize your team.
+            Kelola data master bagian department untuk kebutuhan stock opname.
+            Tambahkan, perbarui, dan kelola data yang digunakan dalam
+            pelaksanaan setiap sesi stock opname.
           </CardDescription>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className="text-sm">
           <DepartmentTable columns={columns} data={departmentsDummy} />
         </CardContent>
       </Card>

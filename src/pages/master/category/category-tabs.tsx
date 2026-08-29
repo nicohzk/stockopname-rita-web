@@ -7,8 +7,8 @@ import {
 } from "@/components/ui/card";
 import { TabsContent } from "@/components/ui/tabs";
 import CategoryTable from "./category-table";
-import {categoriesDummy} from "@/data/category";
-import {columns} from "./category-table-column";
+import { categoriesDummy } from "@/data/category";
+import { columns } from "./category-table-column";
 
 export function CategoryTabs() {
   return (
@@ -17,10 +17,12 @@ export function CategoryTabs() {
         <CardHeader>
           <CardTitle>Categories</CardTitle>
           <CardDescription>
-            Manage your product categories and organize your inventory.
+            Kelola data master bagian kategori untuk kebutuhan stock opname.
+            Tambahkan, perbarui, dan kelola data yang digunakan dalam
+            pelaksanaan setiap sesi stock opname.
           </CardDescription>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className="text-sm">
           <CategoryTable columns={columns} data={categoriesDummy} />
         </CardContent>
       </Card>

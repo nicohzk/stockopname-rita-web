@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import {
-  BarChart3,
   ClipboardList,
   LayoutDashboard,
   Package,
@@ -22,7 +21,6 @@ const menuItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/master", label: "Master Data", icon: Package },
   { to: "/stock-opname", label: "Stock Opname", icon: ClipboardList },
-  { to: "/reports", label: "Reports", icon: BarChart3 },
 ];
 
 export default function AppSidebar() {

@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -6,24 +8,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useState } from "react";
-import { features, type DataTableFeatures } from "@/lib/data-table-features";
 import {
   useTable,
   type ColumnFiltersState,
   type ColumnDef,
   type RowData,
 } from "@tanstack/react-table";
-import { Button } from "@/components/ui/button";
+import { features, type DataTableFeatures } from "@/lib/data-table-features";
 import { Input } from "@/components/ui/input";
-import ProductAddButton from "./product-add-btn";
+import SessionAddButton from "./session-add-btn";
 
 interface DataTableProps<TData extends RowData> {
   columns: ColumnDef<DataTableFeatures, TData>[];
   data: TData[];
 }
 
-export default function ProductTable<TData extends RowData>({
+export function SessionTable<TData extends RowData>({
   columns,
   data,
 }: DataTableProps<TData>) {
@@ -49,14 +49,14 @@ export default function ProductTable<TData extends RowData>({
     <div>
       <div className="flex items-center justify-between pb-2">
         <Input
-          placeholder="Search name..."
-          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+          placeholder="Search kode..."
+          value={(table.getColumn("code")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
-            table.getColumn("name")?.setFilterValue(event.target.value)
+            table.getColumn("code")?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />
-        <ProductAddButton />
+        <SessionAddButton />
       </div>
       <div className="overflow-hidden rounded-md border">
         <Table className="table-fixed">

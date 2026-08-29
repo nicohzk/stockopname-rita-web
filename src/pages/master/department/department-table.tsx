@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useState } from "react";
-import { features, type DataTableFeatures } from "@/types/data-table-features";
+import { features, type DataTableFeatures } from "@/lib/data-table-features";
 import {
   useTable,
   type ColumnFiltersState,
@@ -40,14 +40,14 @@ export default function DepartmentTable<TData extends RowData>({
     initialState: {
       pagination: {
         pageIndex: 0,
-        pageSize: 7,
+        pageSize: 6,
       },
     },
   });
 
   return (
     <div>
-      <div className="flex items-center justify-between py-4">
+      <div className="flex items-center justify-between pb-2">
         <Input
           placeholder="Search name..."
           value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
@@ -103,7 +103,7 @@ export default function DepartmentTable<TData extends RowData>({
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
+      <div className="flex items-center justify-end space-x-2 pt-4">
         <div className="text-muted-foreground text-sm">
           Page {table.state.pagination.pageIndex + 1} of {table.getPageCount()}
         </div>
