@@ -8,7 +8,7 @@ export function SessionActionButton({ session }: { session: Session }) {
 
   return (
     <Button variant={isActive ? "outline" : "secondary"} size="sm"
-    onClick={() => navigate(`/stock-opname/${session.id}`)}>
+    onClick={() => navigate(`/stock-opname/sesi/${session.id}`)}>
       {isActive ? "Masuk Sesi" : "Lihat Detail"}
     </Button>
   );

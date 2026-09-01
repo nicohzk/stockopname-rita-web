@@ -6,22 +6,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { sessionsDummy } from "@/data/session";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { CoordinatorTable } from "./coordinator/coordinator-table";
-import { createColumns as createColumnsCoordinator } from "./coordinator/coordinator-table-column";
-import { coordinatorDummy } from "@/data/coordinator";
 import { StockOpnameTable } from "./result/so-table";
 import { columns as columnsStockOpname } from "./result/so-table-column";
 import { stockOpnameDummy } from "@/data/stock-opname";
+import { coordinatorDummy } from "@/data/coordinator";
+import { inspectorDummy } from "@/data/inspector";
+import { columns as columnsInspector } from "./inspector/inspector-table.column";
+import { InspectorTable } from "./inspector/inspector-table";
 
-export default function SessionPage() {
+export default function CoorPage() {
   const { sessionId } = useParams();
-  const session = sessionsDummy.find(
-    (session) => session.id === Number(sessionId),
-  );
+  const { coorId } = useParams();
+  const coor = coordinatorDummy.find((coor) => coor.id === Number(coorId));
   const navigate = useNavigate();
 
   return (
@@ -29,11 +28,12 @@ export default function SessionPage() {
       <div className="mb-3">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold">{session?.code || "Unknown"}</h1>
-            <p>{session?.status || "Unknown Status"}</p>
-            <p>{session?.location || "Unknown Location"}</p>
+            <h1 className="text-2xl font-bold">{coor?.code || "Unknown"}</h1>
+            <p>{coor?.status || "Unknown Status"}</p>
           </div>
-          <Button onClick={() => navigate("/stock-opname")}>Back</Button>
+          <Button onClick={() => navigate(`/stock-opname/sesi/${sessionId}`)}>
+            Back
+          </Button>
         </div>
         <Separator className="mt-2" />
       </div>
@@ -65,14 +65,11 @@ export default function SessionPage() {
       </div>
       <Card className="my-5">
         <CardHeader>
-          <CardTitle>Data Koordinator</CardTitle>
+          <CardTitle>Data Inspektur</CardTitle>
           <CardDescription></CardDescription>
         </CardHeader>
         <CardContent>
-          <CoordinatorTable
-            columns={createColumnsCoordinator(sessionId!)}
-            data={coordinatorDummy}
-          />
+          <InspectorTable columns={columnsInspector} data={inspectorDummy} />
         </CardContent>
       </Card>
       <Card className="my-5">

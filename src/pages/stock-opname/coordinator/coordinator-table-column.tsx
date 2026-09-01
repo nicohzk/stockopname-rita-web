@@ -2,10 +2,12 @@ import { createColumnHelper } from "@tanstack/react-table";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { Coordinator } from "@/types/coordinator";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 const columnHelper = createColumnHelper<DataTableFeatures, Coordinator>();
 
-export const columns = columnHelper.columns([
+export const createColumns = (sessionId: string) => {
+  return columnHelper.columns([
   columnHelper.accessor("code", {
     header: "Kode Koordinator",
     size: 150,
@@ -48,7 +50,7 @@ export const columns = columnHelper.columns([
           </span>
         </div>
       );
-    },  
+    },
   }),
   columnHelper.accessor("status", {
     header: "Status",
@@ -59,10 +61,22 @@ export const columns = columnHelper.columns([
     header: "Aksi",
     size: 80,
     cell: ({ row }) => {
-      // const coordinator = row.original;
-      return <div className="flex">
-        <Button>Detail</Button>
-      </div>;
+      const coordinator = row.original;
+      const navigate = useNavigate();
+      return (
+        <div className="flex">
+          <Button
+            onClick={() =>
+              navigate(
+                `/stock-opname/sesi/${sessionId}/coordinator/${coordinator.id}`,
+              )
+            }
+          >
+            Detail
+          </Button>
+        </div>
+      );
     },
   }),
-]);
+  ]);
+};
