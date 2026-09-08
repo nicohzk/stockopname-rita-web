@@ -33,7 +33,15 @@ export default function SessionPage() {
             <p>{session?.status || "Unknown Status"}</p>
             <p>{session?.location || "Unknown Location"}</p>
           </div>
-          <Button onClick={() => navigate("/stock-opname")}>Back</Button>
+          <div className="flex gap-5" >
+            <div className="flex gap-2">
+              <Button variant="default">Done</Button>
+              <Button variant="destructive">Cancel</Button>
+            </div>
+            <Button variant="secondary" onClick={() => navigate("/stock-opname")}>
+              Back
+              </Button>
+          </div>
         </div>
         <Separator className="mt-2" />
       </div>

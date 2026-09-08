@@ -17,6 +17,10 @@ export const columns = columnHelper.columns([
     header: "Rak Selesai",
     size: 100,
   }),
+  columnHelper.accessor("totalItem", {
+    header: "Total Barang",
+    size: 100,
+  }),
   columnHelper.display({
     id: "progress",
     header: "Progress",

@@ -31,9 +31,18 @@ export default function CoorPage() {
             <h1 className="text-2xl font-bold">{coor?.code || "Unknown"}</h1>
             <p>{coor?.status || "Unknown Status"}</p>
           </div>
-          <Button onClick={() => navigate(`/stock-opname/sesi/${sessionId}`)}>
-            Back
-          </Button>
+          <div className="flex gap-5">
+            <div className="flex gap-2">
+              <Button variant="default">Done</Button>
+              <Button variant="destructive">Cancel</Button>
+            </div>
+            <Button
+              variant="secondary"
+              onClick={() => navigate(`/stock-opname/sesi/${sessionId}`)}
+            >
+              Back
+            </Button>
+          </div>
         </div>
         <Separator className="mt-2" />
       </div>

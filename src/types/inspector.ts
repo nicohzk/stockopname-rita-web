@@ -3,6 +3,7 @@ export type Inspector = {
   code: string;
   rackAssigned: number;
   rackFinished: number;
+  totalItem: number;  
   startTime: string;
   endTime: string;
 };

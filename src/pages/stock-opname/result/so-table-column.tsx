@@ -12,15 +12,11 @@ export const columns = columnHelper.columns([
   }),
   columnHelper.accessor("name", {
     header: "Nama Barang",
-    size: 160,
+    size: 150,
   }),
   columnHelper.accessor("quantity", {
     header: "Jumlah",
-    size: 50,
-  }),
-  columnHelper.accessor("updatedAt", {
-    header: "Tanggal Update",
-    size: 130,
+    size: 80,
   }),
   columnHelper.accessor("rackName", {
     header: "Rak",
@@ -33,6 +29,10 @@ export const columns = columnHelper.columns([
   columnHelper.accessor("coordinator", {
     header: "Koordinator",
     size: 80,
+  }),
+  columnHelper.accessor("updatedAt", {
+    header: "Tanggal Update",
+    size: 130,
   }),
   columnHelper.display({
     id: "actions",
