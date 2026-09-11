@@ -26,3 +26,15 @@ export type UpdateProductRequest = {
   categoryId?: number;
   departmentId?: number;
 };
+
+export type ProductResponse = {
+  id: number;
+  barcode: string;
+  name: string;
+  buy_price: number;
+  sell_price: number;
+  date_created: string;
+  date_updated: string;
+  category_name: string;
+  department_code: string;
+};

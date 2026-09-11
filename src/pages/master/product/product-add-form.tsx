@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { type SubmitEvent } from "react";
+import { useEffect, useState, type SubmitEvent } from "react";
 import {
   Combobox,
   ComboboxContent,
@@ -12,53 +12,54 @@ import {
 } from "@/components/ui/combobox";
 import type { Category } from "@/types/category";
 import type { Department } from "@/types/department";
+import type { CreateProductRequest, Product } from "@/types/product";
 
+export type SelectOption = { value: string; label: string };
 
-const categories: Category[] = [
-  { id: 1, name: "Food", description: "Food items" },
-  { id: 2, name: "Beverage", description: "Beverage items" },
-  { id: 3, name: "Electronics", description: "Electronic items" },
-];
+export default function ProductAddForm({ categories, departments, onSubmit, initialData, initialCategory, initialDepartment, submitLabel = "Add Product" }: { categories: Category[]; departments: Department[]; onSubmit: (data: CreateProductRequest) => Promise<void>; initialData?: Product; initialCategory?: SelectOption | null; initialDepartment?: SelectOption | null; submitLabel?: string }) {
+  const [selectedCategory, setSelectedCategory] = useState<SelectOption | null>(initialCategory ?? null);
+  const [selectedDepartment, setSelectedDepartment] = useState<SelectOption | null>(initialDepartment ?? null);
 
-const departments: Department[] = [
-  { id: 1, code: "N001", name: "Nestle", description: "Nestle products" },
-  { id: 2, code: "I001", name: "Indofood", description: "Indofood products" },
-  { id: 3, code: "M001", name: "Mayora", description: "Mayora products" },
-];
+  useEffect(() => {
+    setSelectedCategory(initialCategory ?? null);
+    setSelectedDepartment(initialDepartment ?? null);
+  }, [initialCategory, initialDepartment]);
 
-const categoryItems = categories.map((category) => ({
-  value: String(category.id),
-  label: category.name,
-}));
-
-const departmentItems = departments.map((department) => ({
-  value: String(department.id),
-  label: department.name,
-}));
-
-export default function ProductAddForm() {
-  const onSubmit = (e: SubmitEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    //logical post data to backend
+    if (!selectedCategory || !selectedDepartment) {
+      throw new Error("Category and department are required.");
+    }
+
+    await onSubmit({
+      barcode: String(formData.get("barcode")),
+      name: String(formData.get("name")),
+      buyPrice: Number(formData.get("buyPrice")),
+      sellPrice: Number(formData.get("sellPrice")),
+      categoryId: Number(selectedCategory.value),
+      departmentId: Number(selectedDepartment.value),
+    });
   };
 
   return (
-    <form className="space-y-4" onSubmit={onSubmit}>
+    <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="space-y-2">
         <Label htmlFor="barcode">Barcode</Label>
-        <Input id="barcode" name="barcode" />
+        <Input id="barcode" name="barcode" defaultValue={initialData?.barcode} />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="name">Name</Label>
-        <Input id="name" name="name" />
+        <Input id="name" name="name" defaultValue={initialData?.name} />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="category">Category</Label>
         <Combobox
-          items={categoryItems}
+          items={categories.map((category) => ({ value: String(category.id), label: category.name }))}
+          value={selectedCategory}
+          onValueChange={(value) => setSelectedCategory(value as SelectOption | null)}
           itemToStringValue={(item: { value: string; label: string }) => item.label}
         >
           <ComboboxInput placeholder="Select a category" name="category" />
@@ -78,7 +79,9 @@ export default function ProductAddForm() {
       <div className="space-y-2">
         <Label htmlFor="department">Department</Label>
         <Combobox
-          items={departmentItems}
+          items={departments.map((department) => ({ value: String(department.id), label: department.name }))}
+          value={selectedDepartment}
+          onValueChange={(value) => setSelectedDepartment(value as SelectOption | null)}
           itemToStringValue={(item: { value: string; label: string }) => item.label}
         >
           <ComboboxInput placeholder="Select a department" name="department" />
@@ -97,16 +100,16 @@ export default function ProductAddForm() {
 
       <div className="space-y-2">
         <Label htmlFor="buyPrice">Buy Price</Label>
-        <Input id="buyPrice" name="buyPrice" type="number" />
+        <Input id="buyPrice" name="buyPrice" type="number" defaultValue={initialData?.buyPrice} />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="sellPrice">Sell Price</Label>
-        <Input id="sellPrice" name="sellPrice" type="number" />
+        <Input id="sellPrice" name="sellPrice" type="number" defaultValue={initialData?.sellPrice} />
       </div>
 
       <Button type="submit" className="w-full">
-        Add Product
+        {submitLabel}
       </Button>
     </form>
   );

@@ -6,10 +6,12 @@ import MasterPage from "./pages/master/master-page";
 import StockOpnamePage from "./pages/stock-opname/stock-opname-page";
 import SessionPage from "./pages/stock-opname/session-page";
 import CoorPage from "./pages/stock-opname/coor-page";
+import { ToastProvider } from "./components/ui/toast";
 
 function App() {
   return (
-    <BrowserRouter>
+    <ToastProvider>
+      <BrowserRouter>
       <Routes>
         <Route element={<MainLayout />}>
           <Route path="/" element={<DashboardPage />} />
@@ -26,7 +28,8 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
-    </BrowserRouter>
+      </BrowserRouter>
+    </ToastProvider>
   );
 }
 

@@ -2,10 +2,12 @@ import { createColumnHelper } from "@tanstack/react-table";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { StockOpname } from "@/types/stock-opname";
 import StockOpnameTableButton from "./so-table-btn";
+import type { StockOpnameUpdateRequest } from "@/types/stock-opname";
+import { formatDateTime } from "@/lib/format-date";
 
 const columnHelper = createColumnHelper<DataTableFeatures, StockOpname>();
 
-export const columns = columnHelper.columns([
+export const createColumns = (onUpdate: (id: number, data: StockOpnameUpdateRequest) => Promise<void>, onDelete: (id: number) => Promise<void>) => columnHelper.columns([
   columnHelper.accessor("barcode", {
     header: "Barcode",
     size: 90,
@@ -33,6 +35,7 @@ export const columns = columnHelper.columns([
   columnHelper.accessor("updatedAt", {
     header: "Tanggal Update",
     size: 130,
+    cell: (info) => formatDateTime(info.getValue()),
   }),
   columnHelper.display({
     id: "actions",
@@ -41,7 +44,7 @@ export const columns = columnHelper.columns([
     cell: ({ row }) => {
       return (
         <div className="flex">
-          <StockOpnameTableButton product={row.original} />
+          <StockOpnameTableButton item={row.original} onUpdate={(id, quantity) => onUpdate(id, { quantity })} onDelete={onDelete} />
         </div>
       );
     },

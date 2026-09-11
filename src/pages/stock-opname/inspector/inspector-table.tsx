@@ -110,6 +110,7 @@ export function InspectorTable<TData extends RowData>({
         <Button
           variant="outline"
           size="sm"
+          onMouseDown={(event) => event.preventDefault()}
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
         >
@@ -118,6 +119,7 @@ export function InspectorTable<TData extends RowData>({
         <Button
           variant="outline"
           size="sm"
+          onMouseDown={(event) => event.preventDefault()}
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
         >

@@ -2,17 +2,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState, type SubmitEvent } from "react";
+import type { SessionCreateRequest } from "@/types/session";
 
-export default function SessionAddForm() {
+export default function SessionAddForm({ onSubmit }: { onSubmit: (data: SessionCreateRequest) => Promise<void> }) {
   const [coordinatorCodes, setCoordinatorCodes] = useState<string[]>([""]); 
-  const onSubmit = (e: SubmitEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    //logical post data to backend
+    await onSubmit({
+      code: String(formData.get("code")),
+      location: String(formData.get("location")),
+      coordinatorCodes: coordinatorCodes.filter(Boolean),
+    });
   };
 
   return (
-    <form className="space-y-4" onSubmit={onSubmit}>
+    <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="space-y-2">
         <Label htmlFor="code">Code</Label>
         <Input id="code" name="code" />

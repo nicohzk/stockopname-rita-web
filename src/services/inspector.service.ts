@@ -1,0 +1,4 @@
+import { api, type ApiResponse } from "@/lib/api";
+import type { Inspector } from "@/types/inspector";
+type InspectorResponse = { id: number; code: string; rackAssigned: number; rackCompleted: number; totalItems: number };
+export async function getInspectors(coordinatorId?: number) { const query = coordinatorId === undefined ? "" : `?coordinatorId=${coordinatorId}`; const response = await api<ApiResponse<InspectorResponse[]>>(`/stockopname/inspectors${query}`); return (response.data ?? []).map((item): Inspector => ({ id: item.id, code: item.code, rackAssigned: item.rackAssigned, rackFinished: item.rackCompleted, totalItem: item.totalItems })); }

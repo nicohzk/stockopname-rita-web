@@ -4,8 +4,8 @@ export type Session = {
   code: string;
   location: string;
   status: SessionStatus;
-  startedAt: string;
-  endedAt?: string;
+  startedAt: string | null;
+  endedAt: string | null;
   
 };
 
@@ -14,3 +14,5 @@ export type SessionCreateRequest = {
   location: string;
   coordinatorCodes: string[]
 }
+
+export type SessionUpdateRequest = { status: SessionStatus };

@@ -1,11 +1,11 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import DepartmentTableButton from "./department-table-btn";
-import type { Department } from "@/types/department";
+import type { Department, DepartmentRequest } from "@/types/department";
 
 const columnHelper = createColumnHelper<DataTableFeatures, Department>();
 
-export const columns = columnHelper.columns([
+export const getColumns = (onDelete: (id: number) => void, onUpdate: (id: number, data: DepartmentRequest) => Promise<void>) => columnHelper.columns([
   columnHelper.accessor("id", {
     header: "Department ID",
     size: 100,
@@ -30,7 +30,7 @@ export const columns = columnHelper.columns([
       const department = row.original;
 
       return (
-        <DepartmentTableButton department={department} />
+        <DepartmentTableButton department={department} onDelete={onDelete} onUpdate={onUpdate} />
       );
     },
   }),

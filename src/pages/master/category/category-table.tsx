@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { features, type DataTableFeatures } from "@/lib/data-table-features";
 import {
   useTable,
@@ -17,16 +17,19 @@ import {
 } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import CategoryAddButton from "./category-add-btn";
 
 interface DataTableProps<TData extends RowData> {
   columns: ColumnDef<DataTableFeatures, TData>[];
   data: TData[];
+  addButton: ReactNode;
+  error?: string;
 }
 
 export default function CategoryTable<TData extends RowData>({
   columns,
   data,
+  addButton,
+  error,
 }: DataTableProps<TData>) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
@@ -57,7 +60,7 @@ export default function CategoryTable<TData extends RowData>({
           }
           className="max-w-sm"
         />
-        <CategoryAddButton />
+        {addButton}
       </div>
       <div className="rounded-md border">
         <Table className="table-fixed">
@@ -78,6 +81,7 @@ export default function CategoryTable<TData extends RowData>({
             ))}
           </TableHeader>
           <TableBody>
+            {error ? <TableRow><TableCell colSpan={columns.length} className="text-destructive h-24 text-center">{error}</TableCell></TableRow> : null}
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id}>
@@ -111,6 +115,7 @@ export default function CategoryTable<TData extends RowData>({
         <Button
           variant="outline"
           size="sm"
+          onMouseDown={(event) => event.preventDefault()}
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
         >
@@ -119,6 +124,7 @@ export default function CategoryTable<TData extends RowData>({
         <Button
           variant="outline"
           size="sm"
+          onMouseDown={(event) => event.preventDefault()}
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
         >

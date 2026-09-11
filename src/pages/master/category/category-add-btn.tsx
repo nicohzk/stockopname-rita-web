@@ -8,19 +8,22 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import CategoryAddForm from "./category-add-form";
+import { useState } from "react";
 
-export default function CategoryAddButton() {
+export default function CategoryAddButton({ onSubmit }: { onSubmit: (data: { name: string; description: string }) => Promise<void> }) {
+  const [open, setOpen] = useState(false);
+  const handleSubmit = async (data: { name: string; description: string }) => {
+    try { await onSubmit(data); setOpen(false); } catch { }
+  };
   return (
-    <Dialog>
-      <DialogTrigger>
-        <Button>Add Category</Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={<Button>Add Category</Button>} />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add Category</DialogTitle>
         </DialogHeader>
         <Separator />
-        <CategoryAddForm />
+        <CategoryAddForm onSubmit={handleSubmit} />
       </DialogContent>
     </Dialog>
   );

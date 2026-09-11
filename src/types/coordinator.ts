@@ -8,3 +8,5 @@ export type Coordinator = {
   rackFinished: number;
   status: CoordinatorStatus;
 };
+
+export type CoordinatorUpdateRequest = { status: CoordinatorStatus };
