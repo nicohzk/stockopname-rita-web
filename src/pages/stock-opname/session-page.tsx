@@ -266,6 +266,7 @@ export default function SessionPage() {
                 sessionId={id}
                 coordinators={coordinators}
                 onSubmit={handleResultCreate}
+                disabled={session.status === "COMPLETED" || session.status === "CANCELLED"}
               />
             }
             onSearch={setResultSearchInput}

@@ -17,7 +17,7 @@ import type { StockOpnameCreateRequest } from "@/types/stock-opname";
 
 type Option = { value: string; label: string };
 
-export default function StockOpnameAddItemButton({ sessionId, coordinators, onSubmit }: { sessionId: number; coordinators: Coordinator[]; onSubmit: (data: StockOpnameCreateRequest) => Promise<void> }) {
+export default function StockOpnameAddItemButton({ sessionId, coordinators, onSubmit, disabled = false }: { sessionId: number; coordinators: Coordinator[]; onSubmit: (data: StockOpnameCreateRequest) => Promise<void>; disabled?: boolean }) {
   const [open, setOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [inspectors, setInspectors] = useState<Inspector[]>([]);
@@ -87,7 +87,7 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={<Button>Add Item</Button>} />
+      <DialogTrigger render={<Button disabled={disabled}>Add Item</Button>} />
       <DialogContent>
         <DialogHeader><DialogTitle>Add Item</DialogTitle><Separator /></DialogHeader>
         <form className="space-y-4" onSubmit={handleSubmit}>

@@ -286,6 +286,7 @@ export default function CoorPage() {
                 sessionId={session}
                 coordinators={coordinator ? [coordinator] : []}
                 onSubmit={handleResultCreate}
+                disabled={coordinator.status === "COMPLETED" || coordinator.status === "CANCELLED"}
               />
             }
             onSearch={setResultSearchInput}
