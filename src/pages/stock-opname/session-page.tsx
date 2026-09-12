@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import { getSession, updateSession } from "@/services/session.service";
 import { getCoordinators } from "@/services/coordinator.service";
 import { getRackProgress } from "@/services/rack.service";
@@ -54,6 +55,8 @@ export default function SessionPage() {
   const [resultTotalPages, setResultTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"COMPLETED" | "CANCELLED">("COMPLETED");
 
   const loadData = async () => {
     try {
@@ -185,14 +188,14 @@ export default function SessionPage() {
             <div className="flex gap-2">
               <Button
                 variant="default"
-                onClick={() => void changeStatus("COMPLETED")}
+                onClick={() => { setPendingAction("COMPLETED"); setConfirmOpen(true); }}
                 disabled={session.status !== "IN_PROGRESS"}
               >
                 Done
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => void changeStatus("CANCELLED")}
+                onClick={() => { setPendingAction("CANCELLED"); setConfirmOpen(true); }}
                 disabled={session.status !== "IN_PROGRESS"}
               >
                 Cancel
@@ -278,6 +281,19 @@ export default function SessionPage() {
           />
         </CardContent>
       </Card>
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={pendingAction === "COMPLETED" ? "Selesaikan Sesi?" : "Batalkan Sesi?"}
+        description={
+          pendingAction === "COMPLETED"
+            ? "Sesi akan ditandai sebagai selesai."
+            : "Sesi akan dibatalkan. Tindakan ini tidak dapat dibatalkan."
+        }
+        confirmLabel={pendingAction === "COMPLETED" ? "Selesai" : "Batalkan"}
+        destructive={pendingAction === "CANCELLED"}
+        onConfirm={() => changeStatus(pendingAction)}
+      />
     </div>
   );
 }

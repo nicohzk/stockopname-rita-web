@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
   getCoordinator,
   updateCoordinator,
@@ -58,6 +59,8 @@ export default function CoorPage() {
   const [resultTotalPages, setResultTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"COMPLETED" | "CANCELLED">("COMPLETED");
 
   const loadData = async () => {
     try {
@@ -208,14 +211,14 @@ export default function CoorPage() {
             <div className="flex gap-2">
               <Button
                 variant="default"
-                onClick={() => void changeStatus("COMPLETED")}
+                onClick={() => { setPendingAction("COMPLETED"); setConfirmOpen(true); }}
                 disabled={!canComplete}
               >
                 Done
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => void changeStatus("CANCELLED")}
+                onClick={() => { setPendingAction("CANCELLED"); setConfirmOpen(true); }}
                 disabled={!canCancel}
               >
                 Cancel
@@ -298,6 +301,19 @@ export default function CoorPage() {
           />
         </CardContent>
       </Card>
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={pendingAction === "COMPLETED" ? "Selesaikan Koordinator?" : "Batalkan Koordinator?"}
+        description={
+          pendingAction === "COMPLETED"
+            ? "Koordinator akan ditandai sebagai selesai."
+            : "Koordinator akan dibatalkan. Tindakan ini tidak dapat dibatalkan."
+        }
+        confirmLabel={pendingAction === "COMPLETED" ? "Selesai" : "Batalkan"}
+        destructive={pendingAction === "CANCELLED"}
+        onConfirm={() => changeStatus(pendingAction)}
+      />
     </div>
   );
 }
