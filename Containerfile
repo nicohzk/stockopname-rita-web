@@ -17,7 +17,7 @@ RUN npm run build
 # =========================
 # Stage 2: Production
 # =========================
-FROM nginx:alpine
+FROM docker.io/library/nginx:alpine
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 
