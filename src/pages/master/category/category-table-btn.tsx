@@ -33,15 +33,15 @@ export default function CategoryTableButton({ category, onDelete, onUpdate }: { 
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => setOpen(true)}>Edit</DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => void onDelete(category.id)}>Delete</DropdownMenuItem>
+        <DropdownMenuItem variant="destructive" onClick={() => void onDelete(category.id)}>Hapus</DropdownMenuItem>
       </DropdownMenuContent>
       </DropdownMenu>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit Category</DialogTitle>
+          <DialogTitle>Edit Kategori</DialogTitle>
           <Separator />
         </DialogHeader>
-        <CategoryAddForm initialData={category} submitLabel="Update Category" onSubmit={handleSubmit} />
+        <CategoryAddForm initialData={category} submitLabel="Perbarui Kategori" onSubmit={handleSubmit} />
       </DialogContent>
     </Dialog>
   );

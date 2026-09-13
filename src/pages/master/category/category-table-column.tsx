@@ -2,6 +2,7 @@ import { createColumnHelper } from "@tanstack/react-table";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import CategoryTableButton from "./category-table-btn";
 import type { Category, CategoryRequest } from "@/types/category";
+import { TruncatedText } from "@/components/ui/table";
 
 const columnHelper = createColumnHelper<DataTableFeatures, Category>();
 
@@ -13,10 +14,12 @@ export const getColumns = (onDelete: (id: number) => void, onUpdate: (id: number
   columnHelper.accessor("name", {
     header: "Name",
     size: 100,
+    cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
   columnHelper.accessor("description", {
     header: "Description",
     size: 300,
+    cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
   columnHelper.display({
     id: "actions",

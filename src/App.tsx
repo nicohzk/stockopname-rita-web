@@ -7,10 +7,12 @@ import StockOpnamePage from "./pages/stock-opname/stock-opname-page";
 import SessionPage from "./pages/stock-opname/session-page";
 import CoorPage from "./pages/stock-opname/coor-page";
 import { ToastProvider } from "./components/ui/toast";
+import { TooltipProvider } from "./components/ui/tooltip";
 
 function App() {
   return (
     <ToastProvider>
+      <TooltipProvider>
       <BrowserRouter>
       <Routes>
         <Route element={<MainLayout />}>
@@ -29,6 +31,7 @@ function App() {
         </Route>
       </Routes>
       </BrowserRouter>
+      </TooltipProvider>
     </ToastProvider>
   );
 }

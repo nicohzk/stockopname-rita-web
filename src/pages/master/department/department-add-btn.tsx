@@ -17,11 +17,11 @@ export default function DepartmentAddButton({ onSubmit }: { onSubmit: (data: { c
   };
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button>Add Department</Button>} />
+      <DialogTrigger render={<Button>Tambah Department</Button>} />
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Department</DialogTitle>
+          <DialogTitle>Tambah Department</DialogTitle>
           <Separator></Separator>
         </DialogHeader>
         <DepartmentAddForm onSubmit={handleSubmit} />

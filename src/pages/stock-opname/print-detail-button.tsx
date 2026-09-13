@@ -10,8 +10,8 @@ export default function PrintDetailButton({ onPrint }: { onPrint: () => Promise<
     if (loading) return;
     setLoading(true);
     try { await onPrint(); }
-    catch (error) { showToast(error instanceof Error ? error.message : "Failed to generate PDF.", "error"); }
+    catch (error) { showToast(error instanceof Error ? error.message : "Gagal membuat PDF.", "error"); }
     finally { setLoading(false); }
   };
-  return <Button variant="outline" onClick={() => void handlePrint()} disabled={loading}><Printer />{loading ? "Generating..." : "Print Detail"}</Button>;
+  return <Button variant="outline" onClick={() => void handlePrint()} disabled={loading}><Printer />{loading ? "Membuat..." : "Cetak Detail"}</Button>;
 }

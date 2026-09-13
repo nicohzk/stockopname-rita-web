@@ -4,6 +4,7 @@ import type { Coordinator } from "@/types/coordinator";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { TruncatedText } from "@/components/ui/table";
 
 const columnHelper = createColumnHelper<DataTableFeatures, Coordinator>();
 
@@ -22,10 +23,12 @@ export const createColumns = (sessionId: string) => {
   columnHelper.accessor("code", {
     header: "Kode Koordinator",
     size: 150,
+    cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
   columnHelper.accessor("inspector", {
     header: "Inspektur",
     size: 100,
+    cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
   columnHelper.accessor("rackAssigned", {
     header: "Rak Ditugaskan",

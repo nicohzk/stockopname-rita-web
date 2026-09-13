@@ -2,14 +2,13 @@ import { createColumnHelper } from "@tanstack/react-table";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { Product } from "@/types/product";
 import type { UpdateProductRequest } from "@/types/product";
-import type { Category } from "@/types/category";
-import type { Department } from "@/types/department";
 import ProductTableButton from "./product-table-btn";
 import { formatDateTime } from "@/lib/format-date";
+import { TruncatedText } from "@/components/ui/table";
 
 const columnHelper = createColumnHelper<DataTableFeatures, Product>();
 
-export const getColumns = (onDelete: (id: number) => void, onUpdate: (id: number, data: UpdateProductRequest) => Promise<void>, categories: Category[], departments: Department[]) => columnHelper.columns([
+export const getColumns = (onDelete: (id: number) => void, onUpdate: (id: number, data: UpdateProductRequest) => Promise<void>) => columnHelper.columns([
   columnHelper.accessor("id", {
     header: "ID",
     size: 40,
@@ -17,18 +16,22 @@ export const getColumns = (onDelete: (id: number) => void, onUpdate: (id: number
   columnHelper.accessor("barcode", {
     header: "Barcode",
     size: 130,
+    cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
   columnHelper.accessor("name", {
     header: "Name",
     size: 250,
+    cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
   columnHelper.accessor("category", {
     header: "Category",
     size: 130,
+    cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
   columnHelper.accessor("department", {
     header: "Department",
     size: 130,
+    cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
   columnHelper.accessor("buyPrice", {
     header: "Buy Price",
@@ -51,7 +54,7 @@ export const getColumns = (onDelete: (id: number) => void, onUpdate: (id: number
       const product = row.original;
       return (
         <div className="flex justify-center">
-          <ProductTableButton product={product} categories={categories} departments={departments} onDelete={onDelete} onUpdate={onUpdate}/>
+          <ProductTableButton product={product} onDelete={onDelete} onUpdate={onUpdate}/>
         </div>
       );
     },

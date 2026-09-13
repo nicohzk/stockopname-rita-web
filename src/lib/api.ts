@@ -14,7 +14,14 @@ export async function api<T>(
   });
 
   if (!response.ok) {
-    throw new Error(`API Error: ${response.status}`);
+    let message = `API Error: ${response.status}`;
+    try {
+      const body = await response.json();
+      if (body && typeof body.message === "string") {
+        message = body.message;
+      }
+    } catch {}
+    throw new Error(message);
   }
 
   return response.json() as Promise<T>;
@@ -22,7 +29,16 @@ export async function api<T>(
 
 export async function apiBlob(endpoint: string): Promise<Blob> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`);
-  if (!response.ok) throw new Error(`API Error: ${response.status}`);
+  if (!response.ok) {
+    let message = `API Error: ${response.status}`;
+    try {
+      const body = await response.json();
+      if (body && typeof body.message === "string") {
+        message = body.message;
+      }
+    } catch {}
+    throw new Error(message);
+  }
   return response.blob();
 }
 

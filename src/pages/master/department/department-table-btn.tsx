@@ -33,7 +33,7 @@ export default function DepartmentTableButton({ department, onDelete, onUpdate }
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => setOpen(true)}>Edit</DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => void onDelete(department.id)}>Delete</DropdownMenuItem>
+        <DropdownMenuItem variant="destructive" onClick={() => void onDelete(department.id)}>Hapus</DropdownMenuItem>
       </DropdownMenuContent>
       </DropdownMenu>
       <DialogContent>
@@ -41,7 +41,7 @@ export default function DepartmentTableButton({ department, onDelete, onUpdate }
           <DialogTitle>Edit Department</DialogTitle>
           <Separator />
         </DialogHeader>
-        <DepartmentAddForm initialData={department} submitLabel="Update Department" onSubmit={handleSubmit} />
+        <DepartmentAddForm initialData={department} submitLabel="Perbarui Department" onSubmit={handleSubmit} />
       </DialogContent>
     </Dialog>
   );

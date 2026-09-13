@@ -1,6 +1,7 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { Inspector } from "@/types/inspector";
+import { TruncatedText } from "@/components/ui/table";
 
 const columnHelper = createColumnHelper<DataTableFeatures, Inspector>();
 
@@ -8,6 +9,7 @@ export const columns = columnHelper.columns([
   columnHelper.accessor("code", {
     header: "Kode Inspektur",
     size: 150,
+    cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
   columnHelper.accessor("rackAssigned", {
     header: "Rak Ditugaskan",

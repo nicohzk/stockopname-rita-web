@@ -51,24 +51,24 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
 
   useEffect(() => {
     if (open) {
-      void getProducts().then(setProducts).catch((error: unknown) => showToast(error instanceof Error ? error.message : "Failed to load products.", "error"));
+      void getProducts(1, 1000).then((result) => setProducts(result.data)).catch((error: unknown) => showToast(error instanceof Error ? error.message : "Gagal memuat data produk.", "error"));
     }
   }, [open, showToast]);
 
   useEffect(() => {
     setInspector(null); setRack(null); setInspectors([]); setRacks([]);
-    if (coordinator) void getInspectors(Number(coordinator.value)).then(setInspectors).catch((error: unknown) => showToast(error instanceof Error ? error.message : "Failed to load inspectors.", "error"));
+    if (coordinator) void getInspectors(Number(coordinator.value)).then(setInspectors).catch((error: unknown) => showToast(error instanceof Error ? error.message : "Gagal memuat data inspektur.", "error"));
   }, [coordinator, showToast]);
 
   useEffect(() => {
     setRack(null); setRacks([]);
-    if (inspector && coordinator) void getRacks({ sessionId, coordinatorId: Number(coordinator.value), inspectorId: Number(inspector.value) }).then(setRacks).catch((error: unknown) => showToast(error instanceof Error ? error.message : "Failed to load racks.", "error"));
+    if (inspector && coordinator) void getRacks({ sessionId, coordinatorId: Number(coordinator.value), inspectorId: Number(inspector.value) }).then(setRacks).catch((error: unknown) => showToast(error instanceof Error ? error.message : "Gagal memuat data rak.", "error"));
   }, [inspector, coordinator, sessionId, showToast]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!product || !rack || !quantity || Number(quantity) <= 0) {
-      const message = "Product, rack, and a positive quantity are required.";
+      const message = "Produk, rak, dan jumlah yang valid wajib diisi.";
       setValidationError(message);
       showToast(message, "error");
       return;
@@ -87,16 +87,16 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={<Button disabled={disabled}>Add Item</Button>} />
+      <DialogTrigger render={<Button disabled={disabled}>Tambah Item</Button>} />
       <DialogContent>
-        <DialogHeader><DialogTitle>Add Item</DialogTitle><Separator /></DialogHeader>
+        <DialogHeader><DialogTitle>Tambah Item</DialogTitle><Separator /></DialogHeader>
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-2"><Label>Coordinator</Label><Combobox items={coordinators.map((item) => ({ value: String(item.id), label: item.code }))} value={coordinator} onValueChange={(value) => setCoordinator(value as Option | null)} itemToStringValue={(item: Option) => item.label}><ComboboxInput placeholder="Select a coordinator" /><ComboboxContent><ComboboxEmpty>No items found.</ComboboxEmpty><ComboboxList>{(item) => <ComboboxItem key={item.value} value={item}>{item.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox></div>
-          <div className="space-y-2"><Label>Inspector</Label><Combobox items={inspectors.map((item) => ({ value: String(item.id), label: item.code }))} value={inspector} onValueChange={(value) => setInspector(value as Option | null)} disabled={!coordinator} itemToStringValue={(item: Option) => item.label}><ComboboxInput placeholder="Select an inspector" /><ComboboxContent><ComboboxEmpty>No items found.</ComboboxEmpty><ComboboxList>{(item) => <ComboboxItem key={item.value} value={item}>{item.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox></div>
-          <div className="space-y-2"><Label>Rack</Label><Combobox items={racks.map((item) => ({ value: String(item.id), label: item.name }))} value={rack} onValueChange={(value) => setRack(value as Option | null)} disabled={!inspector} itemToStringValue={(item: Option) => item.label}><ComboboxInput placeholder="Select a rack" /><ComboboxContent><ComboboxEmpty>No items found.</ComboboxEmpty><ComboboxList>{(item) => <ComboboxItem key={item.value} value={item}>{item.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox></div>
-          <div className="space-y-2"><Label>Product</Label><Combobox items={products.map((item) => ({ value: String(item.id), label: `${item.barcode} - ${item.name}` }))} value={product} onValueChange={(value) => setProduct(value as Option | null)} itemToStringValue={(item: Option) => item.label}><ComboboxInput placeholder="Select a product" /><ComboboxContent><ComboboxEmpty>No items found.</ComboboxEmpty><ComboboxList>{(item) => <ComboboxItem key={item.value} value={item}>{item.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox></div>
-          <div className="space-y-2"><Label htmlFor="so-quantity">Quantity</Label><Input id="so-quantity" type="number" min="1" value={quantity} onChange={(event) => { setQuantity(event.target.value); setValidationError(undefined); }} />{validationError ? <p className="text-sm text-destructive">{validationError}</p> : null}</div>
-          <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={submitting}>Cancel</Button><Button type="submit" disabled={submitting}>{submitting ? "Adding..." : "Add Item"}</Button></div>
+          <div className="space-y-2"><Label>Koordinator</Label><Combobox items={coordinators.map((item) => ({ value: String(item.id), label: item.code }))} value={coordinator} onValueChange={(value) => setCoordinator(value as Option | null)} itemToStringValue={(item: Option) => item.label}><ComboboxInput placeholder="Pilih koordinator" /><ComboboxContent><ComboboxEmpty>Tidak ada data.</ComboboxEmpty><ComboboxList>{(item) => <ComboboxItem key={item.value} value={item}>{item.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox></div>
+          <div className="space-y-2"><Label>Inspektur</Label><Combobox items={inspectors.map((item) => ({ value: String(item.id), label: item.code }))} value={inspector} onValueChange={(value) => setInspector(value as Option | null)} disabled={!coordinator} itemToStringValue={(item: Option) => item.label}><ComboboxInput placeholder="Pilih inspektur" /><ComboboxContent><ComboboxEmpty>Tidak ada data.</ComboboxEmpty><ComboboxList>{(item) => <ComboboxItem key={item.value} value={item}>{item.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox></div>
+          <div className="space-y-2"><Label>Rak</Label><Combobox items={racks.map((item) => ({ value: String(item.id), label: item.name }))} value={rack} onValueChange={(value) => setRack(value as Option | null)} disabled={!inspector} itemToStringValue={(item: Option) => item.label}><ComboboxInput placeholder="Pilih rak" /><ComboboxContent><ComboboxEmpty>Tidak ada data.</ComboboxEmpty><ComboboxList>{(item) => <ComboboxItem key={item.value} value={item}>{item.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox></div>
+          <div className="space-y-2"><Label>Produk</Label><Combobox items={products.map((item) => ({ value: String(item.id), label: `${item.barcode} - ${item.name}` }))} value={product} onValueChange={(value) => setProduct(value as Option | null)} itemToStringValue={(item: Option) => item.label}><ComboboxInput placeholder="Pilih produk" /><ComboboxContent><ComboboxEmpty>Tidak ada data.</ComboboxEmpty><ComboboxList>{(item) => <ComboboxItem key={item.value} value={item}>{item.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox></div>
+          <div className="space-y-2"><Label htmlFor="so-quantity">Jumlah</Label><Input id="so-quantity" type="number" min="1" value={quantity} onChange={(event) => { setQuantity(event.target.value); setValidationError(undefined); }} />{validationError ? <p className="text-sm text-destructive">{validationError}</p> : null}</div>
+          <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={submitting}>Batal</Button><Button type="submit" disabled={submitting}>{submitting ? "Menambahkan..." : "Tambah Item"}</Button></div>
         </form>
       </DialogContent>
     </Dialog>

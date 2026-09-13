@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useEffect, useState, type SubmitEvent } from "react";
+import { useEffect, useRef, useState, type SubmitEvent } from "react";
 import {
   Combobox,
   ComboboxContent,
@@ -16,20 +16,52 @@ import type { CreateProductRequest, Product } from "@/types/product";
 
 export type SelectOption = { value: string; label: string };
 
-export default function ProductAddForm({ categories, departments, onSubmit, initialData, initialCategory, initialDepartment, submitLabel = "Add Product" }: { categories: Category[]; departments: Department[]; onSubmit: (data: CreateProductRequest) => Promise<void>; initialData?: Product; initialCategory?: SelectOption | null; initialDepartment?: SelectOption | null; submitLabel?: string }) {
+export default function ProductAddForm({ categories, departments, onSearchCategories, onSearchDepartments, onSubmit, initialData, initialCategory, initialDepartment, submitLabel = "Tambah Produk" }: { categories: Category[]; departments: Department[]; onSearchCategories?: (search: string) => Promise<void>; onSearchDepartments?: (search: string) => Promise<void>; onSubmit: (data: CreateProductRequest) => Promise<void>; initialData?: Product; initialCategory?: SelectOption | null; initialDepartment?: SelectOption | null; submitLabel?: string }) {
   const [selectedCategory, setSelectedCategory] = useState<SelectOption | null>(initialCategory ?? null);
   const [selectedDepartment, setSelectedDepartment] = useState<SelectOption | null>(initialDepartment ?? null);
+  const categorySearchRef = useRef("");
+  const departmentSearchRef = useRef("");
+  const categoryTimerRef = useRef<number | undefined>(undefined);
+  const departmentTimerRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     setSelectedCategory(initialCategory ?? null);
     setSelectedDepartment(initialDepartment ?? null);
-  }, [initialCategory, initialDepartment]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleCategorySearch = (value: string) => {
+    categorySearchRef.current = value;
+    if (onSearchCategories) {
+      if (categoryTimerRef.current) clearTimeout(categoryTimerRef.current);
+      categoryTimerRef.current = window.setTimeout(() => {
+        void onSearchCategories(value);
+      }, 250);
+    }
+  };
+
+  const handleDepartmentSearch = (value: string) => {
+    departmentSearchRef.current = value;
+    if (onSearchDepartments) {
+      if (departmentTimerRef.current) clearTimeout(departmentTimerRef.current);
+      departmentTimerRef.current = window.setTimeout(() => {
+        void onSearchDepartments(value);
+      }, 250);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (categoryTimerRef.current) clearTimeout(categoryTimerRef.current);
+      if (departmentTimerRef.current) clearTimeout(departmentTimerRef.current);
+    };
+  }, []);
 
   const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     if (!selectedCategory || !selectedDepartment) {
-      throw new Error("Category and department are required.");
+      throw new Error("Kategori dan department wajib diisi.");
     }
 
     await onSubmit({
@@ -50,21 +82,22 @@ export default function ProductAddForm({ categories, departments, onSubmit, init
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="name">Name</Label>
+        <Label htmlFor="name">Nama</Label>
         <Input id="name" name="name" defaultValue={initialData?.name} />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="category">Category</Label>
+        <Label htmlFor="category">Kategori</Label>
         <Combobox
           items={categories.map((category) => ({ value: String(category.id), label: category.name }))}
           value={selectedCategory}
           onValueChange={(value) => setSelectedCategory(value as SelectOption | null)}
+          onInputValueChange={(inputValue) => handleCategorySearch(inputValue)}
           itemToStringValue={(item: { value: string; label: string }) => item.label}
         >
-          <ComboboxInput placeholder="Select a category" name="category" />
+          <ComboboxInput placeholder="Pilih atau cari kategori" name="category" showClear />
           <ComboboxContent>
-            <ComboboxEmpty>No items found.</ComboboxEmpty>
+            <ComboboxEmpty>Tidak ada data.</ComboboxEmpty>
             <ComboboxList>
               {(category) => (
                 <ComboboxItem key={category.value} value={category}>
@@ -82,11 +115,12 @@ export default function ProductAddForm({ categories, departments, onSubmit, init
           items={departments.map((department) => ({ value: String(department.id), label: department.name }))}
           value={selectedDepartment}
           onValueChange={(value) => setSelectedDepartment(value as SelectOption | null)}
+          onInputValueChange={(inputValue) => handleDepartmentSearch(inputValue)}
           itemToStringValue={(item: { value: string; label: string }) => item.label}
         >
-          <ComboboxInput placeholder="Select a department" name="department" />
+          <ComboboxInput placeholder="Pilih atau cari department" name="department" showClear />
           <ComboboxContent>
-            <ComboboxEmpty>No items found.</ComboboxEmpty>
+            <ComboboxEmpty>Tidak ada data.</ComboboxEmpty>
             <ComboboxList>
               {(department) => (
                 <ComboboxItem key={department.value} value={department}>
@@ -99,12 +133,12 @@ export default function ProductAddForm({ categories, departments, onSubmit, init
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="buyPrice">Buy Price</Label>
+        <Label htmlFor="buyPrice">Harga Beli</Label>
         <Input id="buyPrice" name="buyPrice" type="number" defaultValue={initialData?.buyPrice} />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="sellPrice">Sell Price</Label>
+        <Label htmlFor="sellPrice">Harga Jual</Label>
         <Input id="sellPrice" name="sellPrice" type="number" defaultValue={initialData?.sellPrice} />
       </div>
 

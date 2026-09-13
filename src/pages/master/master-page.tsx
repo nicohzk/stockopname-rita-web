@@ -12,15 +12,15 @@ export default function MasterPage() {
     <div className="p-4">
       <div className="mb-3">
         <h1 className="text-2xl font-bold">Master Data</h1>
-        <p>Welcome to the master data page!</p>
+        <p>Kelola data produk, kategori, dan department yang digunakan dalam stock opname</p>
         <Separator className="mt-2"/>
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3" variant="line">
-          <TabsTrigger className="text-md font-semibold " value="products">Products</TabsTrigger>
-          <TabsTrigger className="text-md font-semibold" value="categories">Categories</TabsTrigger>
-          <TabsTrigger className="text-md font-semibold" value="departments">Departments</TabsTrigger>
+          <TabsTrigger className="text-md font-semibold " value="products">Produk</TabsTrigger>
+          <TabsTrigger className="text-md font-semibold" value="categories">Kategori</TabsTrigger>
+          <TabsTrigger className="text-md font-semibold" value="departments">Department</TabsTrigger>
         </TabsList>
         <ProductTabs isActive={activeTab === "products"} />
         <CategoryTabs isActive={activeTab === "categories"} />

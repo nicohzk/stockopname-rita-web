@@ -19,22 +19,22 @@ export default function SessionAddForm({ onSubmit }: { onSubmit: (data: SessionC
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="space-y-2">
-        <Label htmlFor="code">Code</Label>
+        <Label htmlFor="code">Kode</Label>
         <Input id="code" name="code" />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="location">Location</Label>
+        <Label htmlFor="location">Lokasi</Label>
         <Input id="location" name="location" />
       </div>
 
       <div className="space-y-2 overflow-y-auto max-h-60">
-        <Label htmlFor="coordinatorCodes">Coordinator Code</Label>
+        <Label htmlFor="coordinatorCodes">Kode Koordinator</Label>
 
         {coordinatorCodes.map((code, index) => (
           <div key={index} className="flex gap-2">
             <Input
-              placeholder={`Coordinator code ${index + 1}`}
+              placeholder={`Kode koordinator ${index + 1}`}
               value={code}
               onChange={(e) => {
                 const newCodes = [...coordinatorCodes];
@@ -64,12 +64,12 @@ export default function SessionAddForm({ onSubmit }: { onSubmit: (data: SessionC
           variant="outline"
           onClick={() => setCoordinatorCodes([...coordinatorCodes, ""])}
         >
-          + Tambah Coordinator
+          + Tambah Koordinator
         </Button>
       </div>
 
       <Button type="submit" className="w-full">
-        Add Sesi
+        Tambah Sesi
       </Button>
     </form>
   );

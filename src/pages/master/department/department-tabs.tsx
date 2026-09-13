@@ -15,39 +15,69 @@ import DepartmentAddButton from "./department-add-btn";
 import { useToast } from "@/components/ui/toast";
 
 export default function DepartmentsTabs({ isActive }: { isActive: boolean }) {
-  const [departments, setDepartments] = useState<Awaited<ReturnType<typeof getDepartments>>>([]);
+  const [departments, setDepartments] = useState<Awaited<ReturnType<typeof getDepartments>>["data"]>([]);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
-  const loadDepartments = async () => { setLoading(true); try { setError(undefined); setDepartments(await getDepartments()); } catch (loadError) { setError(loadError instanceof Error ? loadError.message : "Failed to load departments."); } finally { setLoading(false); } };
+
+  const loadDepartments = async (nextPage = page, nextSearch = search) => {
+    try {
+      setLoading(true);
+      setError(undefined);
+      const result = await getDepartments(nextPage, 6, nextSearch);
+      setDepartments(result.data);
+      setPage(result.pagination.page);
+      setTotalPages(result.pagination.total_pages || 1);
+    } catch (loadError) { setError(loadError instanceof Error ? loadError.message : "Gagal memuat data department."); }
+    finally { setLoading(false); }
+  };
+
   useEffect(() => {
-    if (isActive) void loadDepartments();
-  }, [isActive]);
+    const timer = window.setTimeout(() => { setSearch(searchInput); setPage(1); }, 250);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => { if (isActive) void loadDepartments(); }, [isActive, page, search]);
   const handleCreate = async (data: DepartmentRequest) => {
-    try { await createDepartment(data); await loadDepartments(); showToast("Department added successfully."); }
-    catch (mutationError) { showToast(mutationError instanceof Error ? mutationError.message : "Failed to add department.", "error"); throw mutationError; }
+    try { await createDepartment(data); await loadDepartments(); showToast("Department berhasil ditambahkan."); }
+    catch (mutationError) { showToast(mutationError instanceof Error ? mutationError.message : "Gagal menambahkan department.", "error"); throw mutationError; }
   };
   const handleDelete = async (id: number) => {
-    try { await deleteDepartment(id); await loadDepartments(); showToast("Department deleted successfully."); }
-    catch (mutationError) { showToast(mutationError instanceof Error ? mutationError.message : "Failed to delete department.", "error"); }
+    try { await deleteDepartment(id); await loadDepartments(); showToast("Department berhasil dihapus."); }
+    catch (mutationError) { showToast(mutationError instanceof Error ? mutationError.message : "Gagal menghapus department.", "error"); }
   };
   const handleUpdate = async (id: number, data: DepartmentRequest) => {
-    try { await updateDepartment(id, data); await loadDepartments(); showToast("Department updated successfully."); }
-    catch (mutationError) { showToast(mutationError instanceof Error ? mutationError.message : "Failed to update department.", "error"); throw mutationError; }
+    try { await updateDepartment(id, data); await loadDepartments(); showToast("Department berhasil diperbarui."); }
+    catch (mutationError) { showToast(mutationError instanceof Error ? mutationError.message : "Gagal memperbarui department.", "error"); throw mutationError; }
   };
   return (
     <TabsContent value="departments">
       <Card>
         <CardHeader>
-          <CardTitle>Departments</CardTitle>
+          <CardTitle>Department</CardTitle>
           <CardDescription>
-            Kelola data master bagian department untuk kebutuhan stock opname.
-            Tambahkan, perbarui, dan kelola data yang digunakan dalam
-            pelaksanaan setiap sesi stock opname.
+            Kelola data department untuk organisasi produk.
           </CardDescription>
         </CardHeader>
         <CardContent className="text-sm">
-          {loading ? <p>Loading departments...</p> : <DepartmentTable columns={getColumns(handleDelete, handleUpdate)} data={departments} addButton={<DepartmentAddButton onSubmit={handleCreate} />} error={error} />}
+          {loading && !departments.length ? <p>Memuat data department...</p> : (
+            <DepartmentTable
+              columns={getColumns(handleDelete, handleUpdate)}
+              data={departments}
+              addButton={<DepartmentAddButton onSubmit={handleCreate} />}
+              error={error}
+              onSearch={setSearchInput}
+              searchValue={searchInput}
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              loading={loading}
+            />
+          )}
         </CardContent>
       </Card>
     </TabsContent>

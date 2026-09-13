@@ -22,6 +22,12 @@ interface DataTableProps<TData extends RowData> {
   data: TData[];
   addButton: ReactNode;
   error?: string;
+  onSearch?: (value: string) => void;
+  searchValue?: string;
+  page?: number;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
+  loading?: boolean;
 }
 
 export default function DepartmentTable<TData extends RowData>({
@@ -29,6 +35,12 @@ export default function DepartmentTable<TData extends RowData>({
   data,
   addButton,
   error,
+  onSearch,
+  searchValue,
+  page,
+  totalPages,
+  onPageChange,
+  loading = false,
 }: DataTableProps<TData>) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
@@ -49,14 +61,12 @@ export default function DepartmentTable<TData extends RowData>({
   });
 
   return (
-    <div>
+    <div className="relative">
       <div className="flex items-center justify-between pb-2">
         <Input
-          placeholder="Search name..."
-          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-          onChange={(event) =>
-            table.getColumn("name")?.setFilterValue(event.target.value)
-          }
+          placeholder="Cari nama..."
+          value={onSearch ? searchValue : (table.getColumn("name")?.getFilterValue() as string) ?? ""}
+          onChange={(event) => onSearch ? onSearch(event.target.value) : table.getColumn("name")?.setFilterValue(event.target.value)}
           className="max-w-sm"
         />
         {addButton}
@@ -81,7 +91,7 @@ export default function DepartmentTable<TData extends RowData>({
           </TableHeader>
           <TableBody>
             {error ? <TableRow><TableCell colSpan={columns.length} className="text-destructive h-24 text-center">{error}</TableCell></TableRow> : null}
-            {table.getRowModel().rows.length ? (
+            {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
@@ -100,23 +110,24 @@ export default function DepartmentTable<TData extends RowData>({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results found.
+                  Tidak ada data.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+      {loading ? <div className="absolute inset-0 top-12 z-10 bg-background/60" /> : null}
       <div className="flex items-center justify-end space-x-2 pt-4">
         <div className="text-muted-foreground text-sm">
-          Page {table.state.pagination.pageIndex + 1} of {table.getPageCount()}
+          Page {page ?? table.state.pagination.pageIndex + 1} of {totalPages ?? table.getPageCount()}
         </div>
         <Button
           variant="outline"
           size="sm"
           onMouseDown={(event) => event.preventDefault()}
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
+          onClick={() => onPageChange ? onPageChange(Math.max(1, (page ?? 1) - 1)) : table.previousPage()}
+          disabled={onPageChange ? (page ?? 1) <= 1 : !table.getCanPreviousPage()}
         >
           Previous
         </Button>
@@ -124,8 +135,8 @@ export default function DepartmentTable<TData extends RowData>({
           variant="outline"
           size="sm"
           onMouseDown={(event) => event.preventDefault()}
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
+          onClick={() => onPageChange ? onPageChange(Math.min(totalPages ?? 1, (page ?? 1) + 1)) : table.nextPage()}
+          disabled={onPageChange ? (page ?? 1) >= (totalPages ?? 1) : !table.getCanNextPage()}
         >
           Next
         </Button>

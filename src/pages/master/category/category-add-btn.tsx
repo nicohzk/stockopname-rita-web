@@ -17,10 +17,10 @@ export default function CategoryAddButton({ onSubmit }: { onSubmit: (data: { nam
   };
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button>Add Category</Button>} />
+      <DialogTrigger render={<Button>Tambah Kategori</Button>} />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Category</DialogTitle>
+          <DialogTitle>Tambah Kategori</DialogTitle>
         </DialogHeader>
         <Separator />
         <CategoryAddForm onSubmit={handleSubmit} />

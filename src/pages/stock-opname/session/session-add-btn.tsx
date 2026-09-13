@@ -18,11 +18,11 @@ export default function SessionAddBtn({ onSubmit }: { onSubmit: (data: SessionCr
   };
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button>Add Sesi</Button>} />
+      <DialogTrigger render={<Button>Tambah Sesi</Button>} />
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Sesi</DialogTitle>
+          <DialogTitle>Tambah Sesi</DialogTitle>
           <Separator></Separator>
         </DialogHeader>
           <SessionAddForm onSubmit={handleSubmit} />

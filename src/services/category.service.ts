@@ -1,8 +1,12 @@
 import { api, type ApiResponse } from "@/lib/api";
 import type { Category, CategoryRequest, CategoryUpdateRequest } from "@/types/category";
+import type { Pagination } from "@/types/stock-opname";
 
-export function getCategories() {
-  return api<ApiResponse<Category[]>>("/categories").then((response) => response.data ?? []);
+export async function getCategories(page = 1, limit = 6, search = "") {
+  const query = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (search) query.set("search", search);
+  const response = await api<ApiResponse<Category[]> & { pagination: Pagination }>(`/categories?${query}`);
+  return { data: response.data ?? [], pagination: response.pagination ?? { page: 1, limit, total_pages: 1, total_items: 0 } };
 }
 
 export function createCategory(data: CategoryRequest) {

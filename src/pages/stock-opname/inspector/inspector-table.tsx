@@ -48,7 +48,7 @@ export function InspectorTable<TData extends RowData>({
     <div>
       <div className="flex items-center justify-between pb-2">
         <Input
-          placeholder="Search kode..."
+          placeholder="Cari kode..."
           value={(table.getColumn("code")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("code")?.setFilterValue(event.target.value)
@@ -56,7 +56,7 @@ export function InspectorTable<TData extends RowData>({
           className="max-w-sm"
         />
       </div>
-      <div className="overflow-hidden rounded-md border">
+      <div className="rounded-md border">
         <Table className="table-fixed">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -96,7 +96,7 @@ export function InspectorTable<TData extends RowData>({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  Tidak ada data.
                 </TableCell>
               </TableRow>
             )}

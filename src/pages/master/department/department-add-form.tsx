@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { Department } from "@/types/department";
 
-export default function DepartmentAddForm({ onSubmit, initialData, submitLabel = "Add Department" }: { onSubmit: (data: { code: string; name: string; description: string }) => Promise<void>; initialData?: Department; submitLabel?: string }) {
+export default function DepartmentAddForm({ onSubmit, initialData, submitLabel = "Tambah Department" }: { onSubmit: (data: { code: string; name: string; description: string }) => Promise<void>; initialData?: Department; submitLabel?: string }) {
   const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -15,17 +15,17 @@ export default function DepartmentAddForm({ onSubmit, initialData, submitLabel =
   return (
     <form className="space-y-4 w-full min-w-0" onSubmit={handleSubmit}>
       <div className="space-y-2">
-        <Label htmlFor="name">Name</Label>
+        <Label htmlFor="name">Nama</Label>
         <Input id="name" name="name" defaultValue={initialData?.name} />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="code">Code</Label>
+        <Label htmlFor="code">Kode</Label>
         <Input id="code" name="code" defaultValue={initialData?.code} />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="desc">Description</Label>
+        <Label htmlFor="desc">Deskripsi</Label>
         <Textarea name="description" id="description" defaultValue={initialData?.description} />
       </div>
 

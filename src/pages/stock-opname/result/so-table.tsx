@@ -62,14 +62,14 @@ export function StockOpnameTable<TData extends RowData>({
     <div className="relative">
       <div className="flex items-center justify-between pb-2">
         <Input
-          placeholder="Search barang..."
+          placeholder="Cari barang..."
           value={onSearch ? searchValue : (table.getColumn("name")?.getFilterValue() as string) ?? ""}
           onChange={(event) => onSearch ? onSearch(event.target.value) : table.getColumn("name")?.setFilterValue(event.target.value)}
           className="max-w-sm"
         />
         {addButton}
       </div>
-      <div className="overflow-hidden rounded-md border">
+      <div className="rounded-md border">
         <Table className="table-fixed">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -109,7 +109,7 @@ export function StockOpnameTable<TData extends RowData>({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  Tidak ada data.
                 </TableCell>
               </TableRow>
             )}

@@ -25,7 +25,7 @@ export default function StockOpnamePage() {
   const { showToast } = useToast();
   const loadSessions = async (nextPage = page, nextSearch = search) => {
     try { setLoading(true); setError(undefined); const result = await getSessions(nextPage, 6, nextSearch); setSessions(result.data); setPage(result.pagination.page); setTotalPages(result.pagination.total_pages || 1); }
-    catch (loadError) { setError(loadError instanceof Error ? loadError.message : "Failed to load sessions."); }
+    catch (loadError) { setError(loadError instanceof Error ? loadError.message : "Gagal memuat data sesi."); }
     finally { setLoading(false); }
   };
   useEffect(() => {
@@ -34,22 +34,21 @@ export default function StockOpnamePage() {
   }, [searchInput]);
   useEffect(() => { void loadSessions(); }, [page, search]);
   const handleCreate = async (data: SessionCreateRequest) => {
-    try { await createSession(data); await loadSessions(page, search); showToast("Session added successfully."); }
-    catch (mutationError) { showToast(mutationError instanceof Error ? mutationError.message : "Failed to add session.", "error"); throw mutationError; }
+    try { await createSession(data); await loadSessions(page, search); showToast("Sesi berhasil ditambahkan."); }
+    catch (mutationError) { showToast(mutationError instanceof Error ? mutationError.message : "Gagal menambahkan sesi.", "error"); throw mutationError; }
   };
   return (
     <div className="p-4">
       <div className="mb-3">
         <h1 className="text-2xl font-bold">Stock Opname</h1>
-        <p>Welcome to the stock opname page!</p>
+        <p>Pantau dan kelola sesi stock opname yang sedang berlangsung</p>
         <Separator className="mt-2" />
       </div>
       <Card>
         <CardHeader>
           <CardTitle>Sesi Stock Opname</CardTitle>
           <CardDescription>
-            Kelola sesi stock opname. Buat sesi baru, lihat sesi yang sudah ada,
-            dan pantau progresnya.
+            Buat dan pantau sesi stock opname yang sedang berjalan.
           </CardDescription>
         </CardHeader>
         <CardContent>

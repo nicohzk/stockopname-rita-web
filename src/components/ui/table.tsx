@@ -1,6 +1,7 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "./tooltip"
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
@@ -102,6 +103,27 @@ function TableCaption({
   )
 }
 
+function TruncatedText({
+  className,
+  children,
+  delay = 300,
+}: {
+  className?: string
+  children: React.ReactNode
+  delay?: number
+}) {
+  return (
+    <TooltipProvider delay={delay}>
+      <Tooltip>
+        <TooltipTrigger render={<div className={cn("truncate", className)} />}>
+          {children}
+        </TooltipTrigger>
+        <TooltipContent>{children}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
+
 export {
   Table,
   TableHeader,
@@ -111,4 +133,5 @@ export {
   TableRow,
   TableCell,
   TableCaption,
+  TruncatedText,
 }

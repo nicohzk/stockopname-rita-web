@@ -83,7 +83,7 @@ export default function SessionPage() {
       setError(
         loadError instanceof Error
           ? loadError.message
-          : "Failed to load session.",
+          : "Gagal memuat data sesi.",
       );
     } finally {
       setLoading(false);
@@ -105,12 +105,12 @@ export default function SessionPage() {
     try {
       await updateSession(id, { status });
       await loadData();
-      showToast(`Session ${status.toLowerCase()} successfully.`);
+      showToast(`Sesi berhasil ${status === "COMPLETED" ? "diselesaikan" : "dibatalkan"}.`);
     } catch (mutationError) {
       showToast(
         mutationError instanceof Error
           ? mutationError.message
-          : "Failed to update session.",
+          : "Gagal memperbarui sesi.",
         "error",
       );
     }
@@ -122,12 +122,12 @@ export default function SessionPage() {
     try {
       await updateStockOpname(resultId, data);
       await loadData();
-      showToast("Stock opname updated successfully.");
+      showToast("Data stock opname berhasil diperbarui.");
     } catch (mutationError) {
       showToast(
         mutationError instanceof Error
           ? mutationError.message
-          : "Failed to update stock opname.",
+          : "Gagal memperbarui data stock opname.",
         "error",
       );
       throw mutationError;
@@ -137,12 +137,12 @@ export default function SessionPage() {
     try {
       await deleteStockOpname(resultId);
       await loadData();
-      showToast("Stock opname deleted successfully.");
+      showToast("Data stock opname berhasil dihapus.");
     } catch (mutationError) {
       showToast(
         mutationError instanceof Error
           ? mutationError.message
-          : "Failed to delete stock opname.",
+          : "Gagal menghapus data stock opname.",
         "error",
       );
     }
@@ -151,23 +151,23 @@ export default function SessionPage() {
     try {
       await createStockOpname(data);
       await loadData();
-      showToast("Item added successfully.");
+      showToast("Item berhasil ditambahkan.");
     } catch (mutationError) {
       showToast(
         mutationError instanceof Error
           ? mutationError.message
-          : "Failed to add item.",
+          : "Gagal menambahkan item.",
         "error",
       );
       throw mutationError;
     }
   };
 
-  if (loading && !session) return <div className="p-4">Loading session...</div>;
+  if (loading && !session) return <div className="p-4">Memuat data sesi...</div>;
   if (error || !session)
     return (
       <div className="p-4 text-destructive">
-        {error ?? "Session not found."}
+        {error ?? "Sesi tidak ditemukan."}
       </div>
     );
   const rack = progress[0];
@@ -191,14 +191,14 @@ export default function SessionPage() {
                 onClick={() => { setPendingAction("COMPLETED"); setConfirmOpen(true); }}
                 disabled={session.status !== "IN_PROGRESS"}
               >
-                Done
+                Selesai
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => { setPendingAction("CANCELLED"); setConfirmOpen(true); }}
                 disabled={session.status !== "IN_PROGRESS"}
               >
-                Cancel
+                Batal
               </Button>
             </div>
             <PrintDetailButton onPrint={() => openSessionReport(id)} />
@@ -206,7 +206,7 @@ export default function SessionPage() {
               variant="secondary"
               onClick={() => navigate("/stock-opname")}
             >
-              Back
+              Kembali
             </Button>
           </div>
         </div>
@@ -215,7 +215,7 @@ export default function SessionPage() {
       <div className="grid gap-5 md:grid-cols-3 mb-5">
         <Card>
           <CardHeader>
-            <CardTitle>Progress</CardTitle>
+            <CardTitle>Progres</CardTitle>
           </CardHeader>
           <CardContent>
             <p>{progressPercent}%</p>
@@ -243,7 +243,7 @@ export default function SessionPage() {
       <Card className="my-5">
         <CardHeader>
           <CardTitle>Data Koordinator</CardTitle>
-          <CardDescription />
+          <CardDescription>Daftar koordinator yang bertugas dalam sesi ini</CardDescription>
         </CardHeader>
         <CardContent>
           <CoordinatorTable
@@ -255,7 +255,7 @@ export default function SessionPage() {
       <Card className="my-5">
         <CardHeader>
           <CardTitle>Data Barang Stock Opname</CardTitle>
-          <CardDescription />
+          <CardDescription>Daftar barang yang sudah dihitung dalam sesi ini</CardDescription>
         </CardHeader>
         <CardContent>
           <StockOpnameTable

@@ -92,7 +92,7 @@ export default function CoorPage() {
       setError(
         loadError instanceof Error
           ? loadError.message
-          : "Failed to load coordinator.",
+          : "Gagal memuat data koordinator.",
       );
     } finally {
       setLoading(false);
@@ -119,18 +119,18 @@ export default function CoorPage() {
       (status === "COMPLETED" && !canComplete) ||
       (status === "CANCELLED" && !canCancel)
     ) {
-      showToast("The coordinator status does not allow this action.", "error");
+      showToast("Status koordinator tidak memungkinkan aksi ini.", "error");
       return;
     }
     try {
       await updateCoordinator(id, { status });
       await loadData();
-      showToast(`Coordinator ${status.toLowerCase()} successfully.`);
+      showToast(`Koordinator berhasil ${status === "COMPLETED" ? "diselesaikan" : "dibatalkan"}.`);
     } catch (mutationError) {
       showToast(
         mutationError instanceof Error
           ? mutationError.message
-          : "Failed to update coordinator.",
+          : "Gagal memperbarui koordinator.",
         "error",
       );
     }
@@ -142,12 +142,12 @@ export default function CoorPage() {
     try {
       await updateStockOpname(resultId, data);
       await loadData();
-      showToast("Stock opname updated successfully.");
+      showToast("Data stock opname berhasil diperbarui.");
     } catch (mutationError) {
       showToast(
         mutationError instanceof Error
           ? mutationError.message
-          : "Failed to update stock opname.",
+          : "Gagal memperbarui data stock opname.",
         "error",
       );
       throw mutationError;
@@ -157,12 +157,12 @@ export default function CoorPage() {
     try {
       await deleteStockOpname(resultId);
       await loadData();
-      showToast("Stock opname deleted successfully.");
+      showToast("Data stock opname berhasil dihapus.");
     } catch (mutationError) {
       showToast(
         mutationError instanceof Error
           ? mutationError.message
-          : "Failed to delete stock opname.",
+          : "Gagal menghapus data stock opname.",
         "error",
       );
     }
@@ -171,12 +171,12 @@ export default function CoorPage() {
     try {
       await createStockOpname(data);
       await loadData();
-      showToast("Item added successfully.");
+      showToast("Item berhasil ditambahkan.");
     } catch (mutationError) {
       showToast(
         mutationError instanceof Error
           ? mutationError.message
-          : "Failed to add item.",
+          : "Gagal menambahkan item.",
         "error",
       );
       throw mutationError;
@@ -184,11 +184,11 @@ export default function CoorPage() {
   };
 
   if (loading && !coordinator)
-    return <div className="p-4">Loading coordinator...</div>;
+    return <div className="p-4">Memuat data koordinator...</div>;
   if (error || !coordinator)
     return (
       <div className="p-4 text-destructive">
-        {error ?? "Coordinator not found."}
+        {error ?? "Koordinator tidak ditemukan."}
       </div>
     );
   const rack = progress[0];
@@ -214,14 +214,14 @@ export default function CoorPage() {
                 onClick={() => { setPendingAction("COMPLETED"); setConfirmOpen(true); }}
                 disabled={!canComplete}
               >
-                Done
+                Selesai
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => { setPendingAction("CANCELLED"); setConfirmOpen(true); }}
                 disabled={!canCancel}
               >
-                Cancel
+                Batal
               </Button>
             </div>
             <PrintDetailButton onPrint={() => openCoordinatorReport(id)} />
@@ -229,7 +229,7 @@ export default function CoorPage() {
               variant="secondary"
               onClick={() => navigate(`/stock-opname/sesi/${sessionId}`)}
             >
-              Back
+              Kembali
             </Button>
           </div>
         </div>
@@ -238,7 +238,7 @@ export default function CoorPage() {
       <div className="grid gap-5 md:grid-cols-3 mb-5">
         <Card>
           <CardHeader>
-            <CardTitle>Progress</CardTitle>
+            <CardTitle>Progres</CardTitle>
           </CardHeader>
           <CardContent>
             <p>{progressPercent}%</p>
@@ -266,7 +266,7 @@ export default function CoorPage() {
       <Card className="my-5">
         <CardHeader>
           <CardTitle>Data Inspektur</CardTitle>
-          <CardDescription />
+          <CardDescription>Daftar inspektur yang bertugas dalam koordinator ini</CardDescription>
         </CardHeader>
         <CardContent>
           <InspectorTable columns={inspectorColumns} data={inspectors} />
@@ -275,7 +275,7 @@ export default function CoorPage() {
       <Card className="my-5">
         <CardHeader>
           <CardTitle>Data Barang Stock Opname</CardTitle>
-          <CardDescription />
+          <CardDescription>Daftar barang yang sudah dihitung dalam koordinator ini</CardDescription>
         </CardHeader>
         <CardContent>
           <StockOpnameTable
