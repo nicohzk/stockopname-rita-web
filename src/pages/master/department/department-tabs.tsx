@@ -64,7 +64,7 @@ export default function DepartmentsTabs({ isActive }: { isActive: boolean }) {
             Kelola data department untuk organisasi produk.
           </CardDescription>
         </CardHeader>
-        <CardContent className="text-sm">
+        <CardContent>
           {loading && !departments.length ? (
             <div className="flex h-40 items-center justify-center">
               <LoadingSpinner message="Memuat data department..." />

@@ -12,7 +12,7 @@ export default function MasterPage() {
     <div className="min-w-0 p-0 sm:p-2">
       <div className="mb-3">
         <h1 className="text-xl font-bold sm:text-2xl">Master Data</h1>
-        <p className="text-sm text-muted-foreground">Kelola data produk, kategori, dan department yang digunakan dalam stock opname</p>
+        <p>Kelola data produk, kategori, dan department yang digunakan dalam stock opname</p>
         <Separator className="mt-2"/>
       </div>
       

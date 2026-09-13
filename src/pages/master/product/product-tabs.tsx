@@ -64,7 +64,7 @@ export default function ProductTabs({ isActive }: { isActive: boolean }) {
             Kelola data produk yang terdaftar dalam sistem stock opname.
           </CardDescription>
         </CardHeader>
-        <CardContent className="text-sm">
+        <CardContent>
           {loading && !products.length ? (
             <div className="flex h-40 items-center justify-center">
               <LoadingSpinner message="Memuat data produk..." />

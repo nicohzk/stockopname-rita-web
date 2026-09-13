@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +33,14 @@ import type {
 import PrintDetailButton from "./print-detail-button";
 import { openSessionReport } from "@/services/report.service";
 import { StatusBadge } from "@/components/ui/status-badge";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 export default function SessionPage() {
   const { sessionId } = useParams();
@@ -187,7 +195,20 @@ export default function SessionPage() {
       <div className="mb-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold">{session.code}</h1>
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbLink render={<Link to="/stock-opname" />} className="text-xs">
+                    Stock Opname
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="text-xs">{session.code}</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+            <h1 className="text-2xl font-bold mt-2">{session.code}</h1>
             <StatusBadge className="my-2" status={session.status} />
             <p>{session.location}</p>
           </div>
@@ -225,7 +246,7 @@ export default function SessionPage() {
             <CardTitle>Progres</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>{progressPercent}%</p>
+            <p className="text-2xl font-bold">{progressPercent}%</p>
           </CardContent>
         </Card>
         <Card>
@@ -233,7 +254,7 @@ export default function SessionPage() {
             <CardTitle>Status Rak</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>
+            <p className="text-2xl font-bold">
               {rack?.rackCompleted ?? 0}/{rack?.rackAssigned ?? 0}
             </p>
           </CardContent>
@@ -243,7 +264,7 @@ export default function SessionPage() {
             <CardTitle>Total Barang</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>{rack?.total_items ?? 0}</p>
+            <p className="text-2xl font-bold">{rack?.total_items ?? 0}</p>
           </CardContent>
         </Card>
       </div>

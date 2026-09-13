@@ -41,17 +41,17 @@ export default function StockOpnamePage() {
     <div className="min-w-0 p-0 sm:p-2">
       <div className="mb-3">
         <h1 className="text-xl font-bold sm:text-2xl">Stock Opname</h1>
-        <p className="text-sm text-muted-foreground">Pantau dan kelola sesi stock opname yang sedang berlangsung</p>
+        <p>Pantau dan kelola sesi stock opname yang sedang berlangsung</p>
         <Separator className="mt-2" />
       </div>
       <Card>
-        <CardHeader className="p-4 sm:p-6">
+        <CardHeader>
           <CardTitle>Sesi Stock Opname</CardTitle>
           <CardDescription>
             Buat dan pantau sesi stock opname yang sedang berjalan.
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+        <CardContent>
           <SessionTable columns={columns} data={sessions} addButton={<SessionAddBtn onSubmit={handleCreate} />} error={error} onSearch={setSearchInput} searchValue={searchInput} loading={loading} page={page} totalPages={totalPages} onPageChange={setPage} />
         </CardContent>
       </Card>

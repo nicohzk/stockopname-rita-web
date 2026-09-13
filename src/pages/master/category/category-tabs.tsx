@@ -64,7 +64,7 @@ export function CategoryTabs({ isActive }: { isActive: boolean }) {
             Kelola data kategori untuk mengelompokkan produk.
           </CardDescription>
         </CardHeader>
-        <CardContent className="text-sm">
+        <CardContent>
           {loading && !categories.length ? (
             <div className="flex h-40 items-center justify-center">
               <LoadingSpinner message="Memuat data kategori..." />

@@ -100,18 +100,20 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="p-4">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p>Ringkasan dan informasi utama sistem stock opname</p>
-        <Separator className="mt-2" />
-        <p className="mt-4 text-destructive">{error}</p>
+      <div className="min-w-0 p-0 sm:p-2">
+        <div className="mb-3">
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p>Ringkasan dan informasi utama sistem stock opname</p>
+          <Separator className="mt-2" />
+        </div>
+        <p className="text-destructive">{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <div>
+    <div className="min-w-0 p-0 sm:p-2">
+      <div className="mb-3">
         <h1 className="text-2xl font-bold">Dashboard</h1>
         <p>Ringkasan dan informasi utama sistem stock opname</p>
         <Separator className="mt-2" />
@@ -122,7 +124,7 @@ export default function DashboardPage() {
         completedSessions={data.completedSessions}
         inProgressSessions={data.inProgressSessions}
       />
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2 mt-4">
         <DashboardSessionTable sessions={data.recentSessions} />
         <DashboardOldProducts products={data.oldProducts} />
       </div>
