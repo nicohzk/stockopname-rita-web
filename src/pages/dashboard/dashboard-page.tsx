@@ -1,4 +1,5 @@
 import { Separator } from "@/components/ui/separator";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { useEffect, useState } from "react";
 import { getProducts } from "@/services/product.service";
 import { getSessions } from "@/services/session.service";
@@ -91,11 +92,8 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="p-4">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p>Ringkasan dan informasi utama sistem stock opname</p>
-        <Separator className="mt-2" />
-        <p className="mt-4 text-muted-foreground">Memuat data dashboard...</p>
+      <div className="flex h-full min-h-[50vh] items-center justify-center">
+        <LoadingSpinner message="Memuat data dashboard..." />
       </div>
     );
   }

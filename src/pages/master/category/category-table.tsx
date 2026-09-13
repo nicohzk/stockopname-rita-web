@@ -17,6 +17,7 @@ import {
 } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { LoadingOverlay } from "@/components/ui/loading";
 
 interface DataTableProps<TData extends RowData> {
   columns: ColumnDef<DataTableFeatures, TData>[];
@@ -63,12 +64,12 @@ export default function CategoryTable<TData extends RowData>({
 
   return (
     <div className="relative">
-      <div className="flex items-center justify-between pb-2">
+      <div className="flex flex-col gap-2 pb-2 sm:flex-row sm:items-center sm:justify-between">
         <Input
           placeholder="Cari nama..."
           value={onSearch ? searchValue : (table.getColumn("name")?.getFilterValue() as string) ?? ""}
           onChange={(event) => onSearch ? onSearch(event.target.value) : table.getColumn("name")?.setFilterValue(event.target.value)}
-          className="max-w-sm"
+          className="w-full sm:max-w-sm"
         />
         {addButton}
       </div>
@@ -118,8 +119,8 @@ export default function CategoryTable<TData extends RowData>({
           </TableBody>
         </Table>
       </div>
-      {loading ? <div className="absolute inset-0 top-12 z-10 bg-background/60" /> : null}
-      <div className="flex items-center justify-end space-x-2 pt-4">
+      {loading ? <LoadingOverlay /> : null}
+      <div className="flex flex-wrap items-center justify-end gap-2 pt-4">
         <div className="text-muted-foreground text-sm">
           Page {page ?? table.state.pagination.pageIndex + 1} of {totalPages ?? table.getPageCount()}
         </div>

@@ -46,14 +46,14 @@ export function CoordinatorTable<TData extends RowData>({
 
   return (
     <div>
-      <div className="flex items-center justify-between pb-2">
+      <div className="flex flex-col gap-2 pb-2 sm:flex-row sm:items-center sm:justify-between">
         <Input
           placeholder="Cari kode..."
           value={(table.getColumn("code")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("code")?.setFilterValue(event.target.value)
           }
-          className="max-w-sm"
+          className="w-full sm:max-w-sm"
         />
       </div>
       <div className="rounded-md border">
@@ -103,7 +103,7 @@ export function CoordinatorTable<TData extends RowData>({
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 pt-4">
+      <div className="flex flex-wrap items-center justify-end gap-2 pt-4">
         <div className="text-muted-foreground text-sm">
           Page {table.state.pagination.pageIndex + 1} of {table.getPageCount()}
         </div>

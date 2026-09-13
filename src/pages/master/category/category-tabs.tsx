@@ -6,6 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { TabsContent } from "@/components/ui/tabs";
+import { LoadingSpinner } from "@/components/ui/loading";
 import CategoryTable from "./category-table";
 import { useEffect, useState } from "react";
 import type { CategoryRequest } from "@/types/category";
@@ -64,7 +65,11 @@ export function CategoryTabs({ isActive }: { isActive: boolean }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="text-sm">
-          {loading && !categories.length ? <p>Memuat data kategori...</p> : (
+          {loading && !categories.length ? (
+            <div className="flex h-40 items-center justify-center">
+              <LoadingSpinner message="Memuat data kategori..." />
+            </div>
+          ) : (
             <CategoryTable
               columns={getColumns(handleDelete, handleUpdate)}
               data={categories}

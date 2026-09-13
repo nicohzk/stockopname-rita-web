@@ -8,6 +8,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator"
+import { LoadingSpinner } from "@/components/ui/loading";
 import type { CreateProductRequest } from "@/types/product";
 import { useEffect, useState } from "react";
 import { getCategories } from "@/services/category.service";
@@ -56,7 +57,11 @@ export default function ProductAddButton({ onSubmit }: { onSubmit: (data: Create
           <DialogTitle>Tambah Produk</DialogTitle>
           <Separator></Separator>
         </DialogHeader>
-        {loading ? <p className="p-4">Memuat data...</p> : (
+        {loading ? (
+          <div className="flex h-40 items-center justify-center">
+            <LoadingSpinner message="Memuat data..." />
+          </div>
+        ) : (
           <ProductAddForm
             categories={categories}
             departments={departments}

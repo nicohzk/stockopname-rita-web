@@ -6,6 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { TabsContent } from "@/components/ui/tabs";
+import { LoadingSpinner } from "@/components/ui/loading";
 import ProductTable from "./product-table";
 import { useEffect, useState } from "react";
 import { getProducts, createProduct, deleteProduct, updateProduct } from "@/services/product.service";
@@ -64,7 +65,11 @@ export default function ProductTabs({ isActive }: { isActive: boolean }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="text-sm">
-          {loading && !products.length ? <p>Memuat data produk...</p> : (
+          {loading && !products.length ? (
+            <div className="flex h-40 items-center justify-center">
+              <LoadingSpinner message="Memuat data produk..." />
+            </div>
+          ) : (
             <ProductTable
               columns={getColumns(handleDelete, handleUpdate)}
               data={products}

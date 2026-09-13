@@ -11,7 +11,7 @@ const columnHelper = createColumnHelper<DataTableFeatures, Product>();
 export const getColumns = (onDelete: (id: number) => void, onUpdate: (id: number, data: UpdateProductRequest) => Promise<void>) => columnHelper.columns([
   columnHelper.accessor("id", {
     header: "ID",
-    size: 40,
+    size: 60,
   }),
   columnHelper.accessor("barcode", {
     header: "Barcode",
@@ -20,7 +20,7 @@ export const getColumns = (onDelete: (id: number) => void, onUpdate: (id: number
   }),
   columnHelper.accessor("name", {
     header: "Name",
-    size: 250,
+    size: 200,
     cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
   columnHelper.accessor("category", {

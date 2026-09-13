@@ -6,6 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { TabsContent } from "@/components/ui/tabs";
+import { LoadingSpinner } from "@/components/ui/loading";
 import DepartmentTable from "./department-table";
 import { useEffect, useState } from "react";
 import type { DepartmentRequest } from "@/types/department";
@@ -64,7 +65,11 @@ export default function DepartmentsTabs({ isActive }: { isActive: boolean }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="text-sm">
-          {loading && !departments.length ? <p>Memuat data department...</p> : (
+          {loading && !departments.length ? (
+            <div className="flex h-40 items-center justify-center">
+              <LoadingSpinner message="Memuat data department..." />
+            </div>
+          ) : (
             <DepartmentTable
               columns={getColumns(handleDelete, handleUpdate)}
               data={departments}

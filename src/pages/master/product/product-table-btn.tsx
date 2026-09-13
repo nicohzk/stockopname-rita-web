@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { LoadingSpinner } from "@/components/ui/loading";
 import ProductAddForm, { type SelectOption } from "./product-add-form";
 import type { Product, UpdateProductRequest } from "@/types/product";
 import { getCategories } from "@/services/category.service";
@@ -105,7 +106,11 @@ export default function ProductTableButton({ product, onDelete, onUpdate }: { pr
           <DialogTitle>Edit Produk</DialogTitle>
           <Separator />
         </DialogHeader>
-        {loading ? <p className="p-4">Memuat data...</p> : (
+        {loading ? (
+          <div className="flex h-40 items-center justify-center">
+            <LoadingSpinner message="Memuat data..." />
+          </div>
+        ) : (
           <ProductAddForm
             categories={categories}
             departments={departments}

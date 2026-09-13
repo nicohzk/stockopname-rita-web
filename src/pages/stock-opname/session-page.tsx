@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import { getSession, updateSession } from "@/services/session.service";
 import { getCoordinators } from "@/services/coordinator.service";
@@ -163,7 +164,13 @@ export default function SessionPage() {
     }
   };
 
-  if (loading && !session) return <div className="p-4">Memuat data sesi...</div>;
+  if (loading && !session) {
+    return (
+      <div className="flex h-full min-h-[50vh] items-center justify-center">
+        <LoadingSpinner message="Memuat data sesi..." />
+      </div>
+    );
+  }
   if (error || !session)
     return (
       <div className="p-4 text-destructive">
@@ -176,16 +183,16 @@ export default function SessionPage() {
     : 0;
 
   return (
-    <div className="p-4">
+    <div className="min-w-0 p-0 sm:p-2">
       <div className="mb-3">
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold">{session.code}</h1>
             <StatusBadge className="my-2" status={session.status} />
             <p>{session.location}</p>
           </div>
-          <div className="flex gap-5">
-            <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 sm:gap-5">
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="default"
                 onClick={() => { setPendingAction("COMPLETED"); setConfirmOpen(true); }}
@@ -212,7 +219,7 @@ export default function SessionPage() {
         </div>
         <Separator className="mt-2" />
       </div>
-      <div className="grid gap-5 md:grid-cols-3 mb-5">
+      <div className="mb-5 grid gap-3 sm:gap-5 md:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Progres</CardTitle>
