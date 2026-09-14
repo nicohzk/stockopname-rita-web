@@ -1,0 +1,76 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useState, type SubmitEvent } from "react";
+import type { SessionCreateRequest } from "@/types/session";
+
+export default function SessionAddForm({ onSubmit }: { onSubmit: (data: SessionCreateRequest) => Promise<void> }) {
+  const [coordinatorCodes, setCoordinatorCodes] = useState<string[]>([""]); 
+  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    await onSubmit({
+      code: String(formData.get("code")),
+      location: String(formData.get("location")),
+      coordinatorCodes: coordinatorCodes.filter(Boolean),
+    });
+  };
+
+  return (
+    <form className="space-y-4" onSubmit={handleSubmit}>
+      <div className="space-y-2">
+        <Label htmlFor="code">Kode</Label>
+        <Input id="code" name="code" />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="location">Lokasi</Label>
+        <Input id="location" name="location" />
+      </div>
+
+      <div className="space-y-2 overflow-y-auto max-h-60">
+        <Label htmlFor="coordinatorCodes">Kode Koordinator</Label>
+
+        {coordinatorCodes.map((code, index) => (
+          <div key={index} className="flex gap-2">
+            <Input
+              placeholder={`Kode koordinator ${index + 1}`}
+              value={code}
+              onChange={(e) => {
+                const newCodes = [...coordinatorCodes];
+                newCodes[index] = e.target.value;
+                setCoordinatorCodes(newCodes);
+              }}
+            />
+
+            {coordinatorCodes.length > 1 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setCoordinatorCodes(
+                    coordinatorCodes.filter((_, i) => i !== index),
+                  );
+                }}
+              >
+                Hapus
+              </Button>
+            )}
+          </div>
+        ))}
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setCoordinatorCodes([...coordinatorCodes, ""])}
+        >
+          + Tambah Koordinator
+        </Button>
+      </div>
+
+      <Button type="submit" className="w-full">
+        Tambah Sesi
+      </Button>
+    </form>
+  );
+}

@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import {
-  BarChart3,
   ClipboardList,
   LayoutDashboard,
   Package,
@@ -22,7 +21,6 @@ const menuItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/master", label: "Master Data", icon: Package },
   { to: "/stock-opname", label: "Stock Opname", icon: ClipboardList },
-  { to: "/reports", label: "Reports", icon: BarChart3 },
 ];
 
 export default function AppSidebar() {
@@ -88,18 +86,8 @@ export default function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-slate-800 bg-slate-950 px-3 py-3">
-        <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-2">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/15 text-xs font-semibold text-emerald-300">
-              A
-            </div>
-            <div>
-              <p className="text-sm font-medium text-white">Admin</p>
-              <p className="text-[10px] text-slate-400">Online</p>
-            </div>
-          </div>
-        </div>
+      <SidebarFooter className="border-t border-slate-800 bg-slate-950 px-4 py-3">
+        <p className="text-[10px] text-slate-500">Rita Stock Opname v.1.0</p>
       </SidebarFooter>
     </Sidebar>
   );

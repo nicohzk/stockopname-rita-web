@@ -38,6 +38,8 @@ type SidebarContextProps = {
   setOpen: (open: boolean) => void
   openMobile: boolean
   setOpenMobile: (open: boolean) => void
+  collapsedMobile: boolean
+  setCollapsedMobile: (collapsed: boolean) => void
   isMobile: boolean
   toggleSidebar: () => void
 }
@@ -68,6 +70,7 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
+  const [collapsedMobile, setCollapsedMobile] = React.useState(true)
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -90,8 +93,19 @@ function SidebarProvider({
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
-  }, [isMobile, setOpen, setOpenMobile])
+    if (isMobile) {
+      if (!openMobile) {
+        setOpenMobile(true)
+        setCollapsedMobile(true)
+      } else if (collapsedMobile) {
+        setCollapsedMobile(false)
+      } else {
+        setCollapsedMobile(true)
+      }
+    } else {
+      setOpen((prev) => !prev)
+    }
+  }, [isMobile, openMobile, collapsedMobile, setOpen])
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
@@ -121,9 +135,11 @@ function SidebarProvider({
       isMobile,
       openMobile,
       setOpenMobile,
+      collapsedMobile,
+      setCollapsedMobile,
       toggleSidebar,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+    [state, open, setOpen, isMobile, openMobile, setOpenMobile, collapsedMobile, setCollapsedMobile, toggleSidebar]
   )
 
   return (
@@ -162,7 +178,7 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset"
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+  const { isMobile, state, openMobile, setOpenMobile, collapsedMobile } = useSidebar()
 
   if (collapsible === "none") {
     return (
@@ -187,13 +203,14 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+          className="bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
             } as React.CSSProperties
           }
           side={side}
+          collapsed={collapsedMobile}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Sidebar</SheetTitle>

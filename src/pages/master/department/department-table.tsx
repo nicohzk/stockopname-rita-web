@@ -1,0 +1,147 @@
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useState, type ReactNode } from "react";
+import { features, type DataTableFeatures } from "@/lib/data-table-features";
+import {
+  useTable,
+  type ColumnFiltersState,
+  type ColumnDef,
+  type RowData,
+} from "@tanstack/react-table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { LoadingOverlay } from "@/components/ui/loading";
+
+interface DataTableProps<TData extends RowData> {
+  columns: ColumnDef<DataTableFeatures, TData>[];
+  data: TData[];
+  addButton: ReactNode;
+  error?: string;
+  onSearch?: (value: string) => void;
+  searchValue?: string;
+  page?: number;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
+  loading?: boolean;
+}
+
+export default function DepartmentTable<TData extends RowData>({
+  columns,
+  data,
+  addButton,
+  error,
+  onSearch,
+  searchValue,
+  page,
+  totalPages,
+  onPageChange,
+  loading = false,
+}: DataTableProps<TData>) {
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+
+  const table = useTable({
+    features,
+    data,
+    columns,
+    onColumnFiltersChange: setColumnFilters,
+    state: {
+      columnFilters,
+    },
+    initialState: {
+      pagination: {
+        pageIndex: 0,
+        pageSize: 6,
+      },
+    },
+  });
+
+  return (
+    <div className="relative">
+      <div className="flex flex-col gap-2 pb-2 sm:flex-row sm:items-center sm:justify-between">
+        <Input
+          placeholder="Cari nama..."
+          value={onSearch ? searchValue : (table.getColumn("name")?.getFilterValue() as string) ?? ""}
+          onChange={(event) => onSearch ? onSearch(event.target.value) : table.getColumn("name")?.setFilterValue(event.target.value)}
+          className="w-full sm:max-w-sm"
+        />
+        {addButton}
+      </div>
+      <div className="rounded-md border">
+        <Table className="table-fixed">
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    style={{ width: `${header.getSize()}px` }}
+                  >
+                    {header.isPlaceholder ? null : (
+                      <table.FlexRender header={header} />
+                    )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {error ? <TableRow><TableCell colSpan={columns.length} className="text-destructive h-24 text-center">{error}</TableCell></TableRow> : null}
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell
+                      key={cell.id}
+                      style={{ width: `${cell.column.getSize()}px` }}
+                    >
+                      <table.FlexRender cell={cell} />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  Tidak ada data.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      {loading ? <LoadingOverlay /> : null}
+      <div className="flex flex-wrap items-center justify-end gap-2 pt-4">
+        <div className="text-muted-foreground text-sm">
+          Page {page ?? table.state.pagination.pageIndex + 1} of {totalPages ?? table.getPageCount()}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => onPageChange ? onPageChange(Math.max(1, (page ?? 1) - 1)) : table.previousPage()}
+          disabled={onPageChange ? (page ?? 1) <= 1 : !table.getCanPreviousPage()}
+        >
+          Previous
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => onPageChange ? onPageChange(Math.min(totalPages ?? 1, (page ?? 1) + 1)) : table.nextPage()}
+          disabled={onPageChange ? (page ?? 1) >= (totalPages ?? 1) : !table.getCanNextPage()}
+        >
+          Next
+        </Button>
+      </div>
+    </div>
+  );
+}

@@ -7,7 +7,7 @@ export default function MainLayout() {
     <SidebarProvider>
       <AppSidebar />
 
-      <main className="flex-1 p-4">
+      <main className="min-w-0 flex-1 p-3 sm:p-4">
         <SidebarTrigger />
         <Outlet />
       </main>
