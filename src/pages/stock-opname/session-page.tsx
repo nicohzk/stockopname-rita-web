@@ -30,8 +30,7 @@ import type {
   StockOpnameCreateRequest,
   StockOpnameUpdateRequest,
 } from "@/types/stock-opname";
-import PrintDetailButton from "./print-detail-button";
-import { openSessionReport } from "@/services/report.service";
+import SessionExportMenu from "./session-export-menu";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Breadcrumb,
@@ -229,7 +228,7 @@ export default function SessionPage() {
                 Batal
               </Button>
             </div>
-            <PrintDetailButton onPrint={() => openSessionReport(id)} />
+            <SessionExportMenu sessionId={id} sessionCode={session.code} />
             <Button
               variant="secondary"
               onClick={() => navigate("/stock-opname")}
