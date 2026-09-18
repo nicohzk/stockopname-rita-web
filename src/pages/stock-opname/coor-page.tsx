@@ -42,9 +42,9 @@ import type {
   StockOpnameCreateRequest,
   StockOpnameUpdateRequest,
 } from "@/types/stock-opname";
-import PrintDetailButton from "./print-detail-button";
-import { openCoordinatorReport } from "@/services/report.service";
+import CoordinatorPrintMenu from "./coordinator-print-menu";
 import { StatusBadge } from "@/components/ui/status-badge";
+import CoordinatorQRModal from "@/components/CoordinatorQRModal";
 
 export default function CoorPage() {
   const { sessionId, coorId } = useParams();
@@ -73,6 +73,7 @@ export default function CoorPage() {
   const [error, setError] = useState<string>();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<"COMPLETED" | "CANCELLED">("COMPLETED");
+  const [qrOpen, setQrOpen] = useState(false);
 
   const loadData = async () => {
     try {
@@ -266,7 +267,14 @@ export default function CoorPage() {
                 Batal
               </Button>
             </div>
-            <PrintDetailButton onPrint={() => openCoordinatorReport(id)} />
+            <CoordinatorPrintMenu
+              coordinatorId={id}
+              status={coordinator.status}
+              onShowQR={() => {
+                if (coordinator.status !== "IN_PROGRESS") return;
+                setQrOpen(true);
+              }}
+            />
             <Button
               variant="secondary"
               onClick={() => navigate(`/stock-opname/sesi/${sessionId}`)}
@@ -355,6 +363,19 @@ export default function CoorPage() {
         confirmLabel={pendingAction === "COMPLETED" ? "Selesai" : "Batalkan"}
         destructive={pendingAction === "CANCELLED"}
         onConfirm={() => changeStatus(pendingAction)}
+      />
+      <CoordinatorQRModal
+        coordinator={
+          coordinator
+            ? {
+                id: coordinator.id,
+                code: coordinator.code,
+                status: coordinator.status,
+              }
+            : null
+        }
+        open={qrOpen}
+        onClose={() => setQrOpen(false)}
       />
     </div>
   );
