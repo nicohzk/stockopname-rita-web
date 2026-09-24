@@ -51,7 +51,8 @@ export default function ProductBarcodeTable({ products, onUpdateBarcodes }: { pr
         <CardDescription>Kelola barcode per produk. Disimpan via produk (replace full set).</CardDescription>
       </CardHeader>
       <CardContent>
-        <Input placeholder="Cari PLU / nama / barcode..." value={search} onChange={(e) => setSearch(e.target.value)} className="mb-3 w-full sm:max-w-sm" />
+        <Input placeholder="Cari di halaman ini: PLU / nama / barcode..." value={search} onChange={(e) => setSearch(e.target.value)} className="mb-3 w-full sm:max-w-sm" />
+        <p className="text-muted-foreground mb-3 text-xs">Pencarian hanya mencakup halaman tabel produk di atas. Untuk produk lain, cari dulu di tabel produk.</p>
         <div className="rounded-md border">
           <Table className="table-fixed">
             <TableHeader>
@@ -65,7 +66,7 @@ export default function ProductBarcodeTable({ products, onUpdateBarcodes }: { pr
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="h-24 text-center">Tidak ada data.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="h-24 text-center">Tidak ada data di halaman ini.</TableCell></TableRow>
               ) : filtered.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell><TruncatedText>{p.plu}</TruncatedText></TableCell>

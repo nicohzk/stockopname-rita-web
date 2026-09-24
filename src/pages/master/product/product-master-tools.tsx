@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +16,7 @@ export function ProductImportCard() {
   const [result, setResult] = useState<ImportResult | null>(null);
   const { showToast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!produk || !barcode) {
       showToast("File PRODUK.DBF dan BARCODE.DBF wajib diisi.", "error");

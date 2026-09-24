@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -78,7 +78,7 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
     if (inspector && coordinator) void getRacks({ sessionId, coordinatorId: Number(coordinator.value), inspectorId: Number(inspector.value) }).then(setRacks).catch((error: unknown) => showToast(error instanceof Error ? error.message : "Gagal memuat data rak.", "error"));
   }, [inspector, coordinator, sessionId, showToast]);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const barcode = scannedBarcode.trim();
     const plu = product?.value.trim() ?? "";
@@ -96,6 +96,7 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
       resetForm();
       setOpen(false);
     } catch {
+      // Parent (session/coor page) sudah toast error + rethrow; di sini cukup aktifkan tombol lagi.
       setSubmitting(false);
     }
   };

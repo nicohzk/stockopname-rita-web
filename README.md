@@ -16,7 +16,7 @@ npm run dev
 
 ```bash
 nano .env   # isi VITE_API_URL=https://api.produksi...
-docker build -t stockopname-rita-web .
+docker build -f Containerfile -t stockopname-rita-web .
 docker run -p 80:80 stockopname-rita-web
 ```
 

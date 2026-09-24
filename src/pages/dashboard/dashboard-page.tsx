@@ -9,7 +9,7 @@ import type { Session } from "@/types/session";
 import type { ProductLastSession } from "@/types/dashboard";
 import DashboardSummaryCards from "./dashboard-summary-cards";
 import DashboardSessionTable from "./dashboard-session-table";
-import DashboardOldProducts from "./dashboard-products";
+import DashboardProducts from "./dashboard-products";
 
 type SessionWithProgress = Session & { progress: number | null };
 
@@ -126,7 +126,7 @@ export default function DashboardPage() {
       />
       <div className="grid gap-4 lg:grid-cols-2 mt-4">
         <DashboardSessionTable sessions={data.recentSessions} />
-        <DashboardOldProducts products={data.oldProducts} />
+        <DashboardProducts products={data.oldProducts} />
       </div>
     </div>
   );
