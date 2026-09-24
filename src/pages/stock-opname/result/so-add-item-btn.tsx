@@ -27,6 +27,8 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
   const [rack, setRack] = useState<Option | null>(null);
   const [product, setProduct] = useState<Option | null>(null);
   const [scannedBarcode, setScannedBarcode] = useState("");
+  const [productSearchInput, setProductSearchInput] = useState("");
+  const [productSearch, setProductSearch] = useState("");
   const [quantity, setQuantity] = useState("");
   const [validationError, setValidationError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
@@ -38,6 +40,8 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
     setRack(null);
     setProduct(null);
     setScannedBarcode("");
+    setProductSearchInput("");
+    setProductSearch("");
     setQuantity("");
     setInspectors([]);
     setRacks([]);
@@ -53,9 +57,16 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
 
   useEffect(() => {
     if (open) {
-      void getProducts(1, 1000).then((result) => setProducts(result.data)).catch((error: unknown) => showToast(error instanceof Error ? error.message : "Gagal memuat data produk.", "error"));
+      void getProducts(1, 20, productSearch).then((result) => setProducts(result.data)).catch((error: unknown) => showToast(error instanceof Error ? error.message : "Gagal memuat data produk.", "error"));
     }
-  }, [open, showToast]);
+  }, [open, productSearch, showToast]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setProductSearch(productSearchInput);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [productSearchInput]);
 
   useEffect(() => {
     setInspector(null); setRack(null); setInspectors([]); setRacks([]);
@@ -102,7 +113,7 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
             <Label htmlFor="so-barcode">Scan Barcode</Label>
             <Input id="so-barcode" value={scannedBarcode} onChange={(e) => { setScannedBarcode(e.target.value); setValidationError(undefined); }} placeholder="Scan / ketik barcode…" autoFocus />
           </div>
-          <div className="space-y-2"><Label>Produk (PLU)</Label><Combobox items={products.map((item) => ({ value: item.plu, label: `${item.plu} - ${item.name}` }))} value={product} onValueChange={(value) => { setProduct(value as Option | null); setValidationError(undefined); }} itemToStringValue={(item: Option) => item.label}><ComboboxInput placeholder="Pilih produk atau kosongkan jika scan" /><ComboboxContent><ComboboxEmpty>Tidak ada data.</ComboboxEmpty><ComboboxList>{(item) => <ComboboxItem key={item.value} value={item}>{item.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox>
+          <div className="space-y-2"><Label>Produk (PLU)</Label><Combobox items={products.map((item) => ({ value: item.plu, label: `${item.plu} - ${item.name}` }))} value={product} onValueChange={(value) => { setProduct(value as Option | null); setValidationError(undefined); }} onInputValueChange={(value) => setProductSearchInput(value)} itemToStringValue={(item: Option) => item.label}><ComboboxInput placeholder="Ketik PLU / nama / barcode…" /><ComboboxContent><ComboboxEmpty>Tidak ada data.</ComboboxEmpty><ComboboxList>{(item) => <ComboboxItem key={item.value} value={item}>{item.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox>
             <p className="text-muted-foreground text-xs">Isi salah satu: barcode hasil scan atau produk PLU. Jika keduanya diisi, barcode diprioritaskan.</p>
           </div>
           <div className="space-y-2"><Label htmlFor="so-quantity">Jumlah</Label><Input id="so-quantity" type="number" min="1" value={quantity} onChange={(event) => { setQuantity(event.target.value); setValidationError(undefined); }} />{validationError ? <p className="text-sm text-destructive">{validationError}</p> : null}</div>
