@@ -9,7 +9,7 @@ import type { Session } from "@/types/session";
 import type { ProductLastSession } from "@/types/dashboard";
 import DashboardSummaryCards from "./dashboard-summary-cards";
 import DashboardSessionTable from "./dashboard-session-table";
-import DashboardOldProducts from "./dashboard-old-products";
+import DashboardOldProducts from "./dashboard-products";
 
 type SessionWithProgress = Session & { progress: number | null };
 
