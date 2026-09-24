@@ -8,7 +8,7 @@ import { useToast } from "@/components/ui/toast";
 import { clearProducts, importProducts } from "@/services/product.service";
 import type { ImportResult } from "@/types/product";
 
-export function ProductImportCard() {
+export function ProductImportCard({ onImported }: { onImported: () => void }) {
   const [produk, setProduk] = useState<File | null>(null);
   const [barcode, setBarcode] = useState<File | null>(null);
   const [dryRun, setDryRun] = useState(false);
@@ -27,6 +27,7 @@ export function ProductImportCard() {
       const res = await importProducts(produk, barcode, dryRun);
       setResult(res);
       showToast(dryRun ? "Validasi dry-run selesai." : "Master data berhasil diimpor.");
+      if (!dryRun) onImported();
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Gagal mengimpor master data.", "error");
     } finally {

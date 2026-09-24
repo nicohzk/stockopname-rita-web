@@ -24,6 +24,7 @@ export default function ProductTabs({ isActive }: { isActive: boolean }) {
     try {
       setLoading(true);
       setError(undefined);
+      setSearchInput(nextSearch);
       const result = await getProducts(nextPage, 6, nextSearch);
       setProducts(result.data);
       setPage(result.pagination.page);
@@ -85,7 +86,7 @@ export default function ProductTabs({ isActive }: { isActive: boolean }) {
         </CardContent>
       </Card>
       <ProductBarcodeTable products={products} onUpdateBarcodes={handleUpdateBarcodes} />
-      <ProductImportCard />
+      <ProductImportCard onImported={() => void loadData(1, "")} />
       <ProductClearCard onCleared={() => void loadData(1, "")} />
     </div>
   );
