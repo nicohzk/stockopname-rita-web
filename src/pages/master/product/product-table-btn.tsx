@@ -11,7 +11,8 @@ export default function ProductTableButton({ product, onDelete, onUpdate }: { pr
   const [open, setOpen] = useState(false);
 
   const handleSubmit = async (data: UpdateProductRequest) => {
-    try { await onUpdate(product.id, data); setOpen(false); } catch { }
+    // Parent sudah toast error + rethrow; di sini cukup tahan dialog tetap terbuka.
+    try { await onUpdate(product.id, data); setOpen(false); } catch { /* error sudah ditampilkan parent */ }
   };
 
   return (

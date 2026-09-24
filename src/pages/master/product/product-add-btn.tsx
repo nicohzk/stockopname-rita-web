@@ -9,7 +9,8 @@ export default function ProductAddButton({ onSubmit }: { onSubmit: (data: Create
   const [open, setOpen] = useState(false);
 
   const handleSubmit = async (data: CreateProductRequest) => {
-    try { await onSubmit(data); setOpen(false); } catch { }
+    // Parent sudah toast error + rethrow; di sini cukup tahan dialog tetap terbuka.
+    try { await onSubmit(data); setOpen(false); } catch { /* error sudah ditampilkan parent */ }
   };
   return (
     <Dialog open={open} onOpenChange={setOpen}>
