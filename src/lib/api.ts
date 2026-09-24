@@ -42,6 +42,23 @@ export async function apiBlob(endpoint: string): Promise<Blob> {
   return response.blob();
 }
 
+export async function apiForm<T>(endpoint: string, form: FormData, options?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, method: options?.method ?? "POST", body: form });
+
+  if (!response.ok) {
+    let message = `API Error: ${response.status}`;
+    try {
+      const body = await response.json();
+      if (body && typeof body.message === "string") {
+        message = body.message;
+      }
+    } catch {}
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<T>;
+}
+
 export type ApiResponse<T> = {
   message: string;
   data: T;

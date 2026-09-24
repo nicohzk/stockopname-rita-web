@@ -26,6 +26,6 @@ export function deleteStockOpname(id: number) {
 export function createStockOpname(data: StockOpnameCreateRequest) {
   return api<ApiResponse<StockOpnameResponse>>("/stockopname/results", {
     method: "POST",
-    body: JSON.stringify({ quantity: data.quantity, product_id: data.productId, rak_id: data.rackId }),
+    body: JSON.stringify({ quantity: data.quantity, barcode: data.barcode ?? "", plu: data.plu ?? "", rak_id: data.rackId }),
   });
 }

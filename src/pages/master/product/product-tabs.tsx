@@ -1,15 +1,10 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { TabsContent } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading";
 import ProductTable from "./product-table";
+import ProductBarcodeTable from "./product-barcode-table";
+import { ProductImportCard, ProductClearCard } from "./product-master-tools";
 import { useEffect, useState } from "react";
-import { getProducts, createProduct, deleteProduct, updateProduct } from "@/services/product.service";
+import { getProducts, createProduct, deleteProduct, updateProduct, updateProductBarcodes } from "@/services/product.service";
 import type { CreateProductRequest, UpdateProductRequest } from "@/types/product";
 import { getColumns } from "./product-table-column";
 import ProductAddButton from "./product-add-btn";
@@ -55,13 +50,17 @@ export default function ProductTabs({ isActive }: { isActive: boolean }) {
     try { await updateProduct(id, data); await loadData(); showToast("Produk berhasil diperbarui."); }
     catch (mutationError) { showToast(mutationError instanceof Error ? mutationError.message : "Gagal memperbarui produk.", "error"); throw mutationError; }
   };
+  const handleUpdateBarcodes = async (id: number, barcodes: string[]) => {
+    try { await updateProductBarcodes(id, barcodes); await loadData(); }
+    catch (mutationError) { showToast(mutationError instanceof Error ? mutationError.message : "Gagal memperbarui barcode.", "error"); throw mutationError; }
+  };
   return (
-    <TabsContent value="products">
+    <div>
       <Card>
         <CardHeader>
           <CardTitle>Produk</CardTitle>
           <CardDescription>
-            Kelola data produk yang terdaftar dalam sistem stock opname.
+            Kelola data produk (PLU) yang terdaftar dalam sistem stock opname.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -85,6 +84,9 @@ export default function ProductTabs({ isActive }: { isActive: boolean }) {
           )}
         </CardContent>
       </Card>
-    </TabsContent>
+      <ProductBarcodeTable products={products} onUpdateBarcodes={handleUpdateBarcodes} />
+      <ProductImportCard />
+      <ProductClearCard onCleared={() => void loadData(1, "")} />
+    </div>
   );
 }

@@ -17,6 +17,8 @@ export type CoordinatorQRInfo = {
   id: number;
   code: string;
   status: string;
+  sessionCode?: string;
+  sessionLocation?: string;
 };
 
 type CoordinatorQRFigureProps = {
@@ -51,6 +53,7 @@ export function CoordinatorQRFigure({
       {showMeta && (
         <div className="flex flex-col items-center gap-1.5 text-center">
           <p className="text-base font-semibold">{coordinator.code}</p>
+          {coordinator.sessionCode && <p className="text-muted-foreground text-xs">{coordinator.sessionCode}{coordinator.sessionLocation ? ` · ${coordinator.sessionLocation}` : ""}</p>}
           <StatusBadge status={coordinator.status} />
         </div>
       )}

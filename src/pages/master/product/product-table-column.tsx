@@ -9,38 +9,29 @@ import { TruncatedText } from "@/components/ui/table";
 const columnHelper = createColumnHelper<DataTableFeatures, Product>();
 
 export const getColumns = (onDelete: (id: number) => void, onUpdate: (id: number, data: UpdateProductRequest) => Promise<void>) => columnHelper.columns([
-  columnHelper.accessor("id", {
-    header: "ID",
-    size: 60,
+  columnHelper.accessor("id", { header: "ID", size: 60 }),
+  columnHelper.accessor("plu", {
+    header: "PLU",
+    size: 110,
+    cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
   columnHelper.accessor("barcode", {
-    header: "Barcode",
+    header: "Barcode Utama",
     size: 130,
-    cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
+    cell: (info) => <TruncatedText>{info.getValue() || "-"}</TruncatedText>,
   }),
   columnHelper.accessor("name", {
     header: "Name",
     size: 200,
     cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
-  columnHelper.accessor("category", {
-    header: "Category",
-    size: 130,
-    cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
-  }),
   columnHelper.accessor("department", {
-    header: "Department",
-    size: 130,
+    header: "Dept",
+    size: 90,
     cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
-  columnHelper.accessor("buyPrice", {
-    header: "Buy Price",
-    size: 100,
-  }),
-  columnHelper.accessor("sellPrice", {
-    header: "Sell Price",
-    size: 100,
-  }),
+  columnHelper.accessor("buyPrice", { header: "Buy Price", size: 100 }),
+  columnHelper.accessor("sellPrice", { header: "Sell Price", size: 100 }),
   columnHelper.accessor("lastUpdate", {
     header: "Last Update",
     size: 130,
