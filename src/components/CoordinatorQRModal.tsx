@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type Ref } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ export type CoordinatorQRInfo = {
 type CoordinatorQRFigureProps = {
   coordinator: CoordinatorQRInfo;
   size?: number;
-  svgRef?: React.Ref<SVGSVGElement>;
+  svgRef?: Ref<SVGSVGElement>;
   showMeta?: boolean;
 };
 
