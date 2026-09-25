@@ -3,11 +3,11 @@ import { formatDateTime } from "@/lib/format-date";
 import { TruncatedText } from "@/components/ui/table";
 import type { ProductLastSession } from "@/types/dashboard";
 
-type DashboardOldProductsProps = {
+type DashboardProductsProps = {
   products: ProductLastSession[];
 };
 
-export default function DashboardOldProducts({ products }: DashboardOldProductsProps) {
+export default function DashboardProducts({ products }: DashboardProductsProps) {
   return (
     <Card>
       <CardHeader>

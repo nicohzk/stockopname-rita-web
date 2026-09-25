@@ -14,7 +14,8 @@ import type { SessionCreateRequest } from "@/types/session";
 export default function SessionAddBtn({ onSubmit }: { onSubmit: (data: SessionCreateRequest) => Promise<void> }) {
   const [open, setOpen] = useState(false);
   const handleSubmit = async (data: SessionCreateRequest) => {
-    try { await onSubmit(data); setOpen(false); } catch { }
+    // Parent sudah toast error + rethrow; di sini cukup tahan dialog tetap terbuka.
+    try { await onSubmit(data); setOpen(false); } catch { /* error sudah ditampilkan parent */ }
   };
   return (
     <Dialog open={open} onOpenChange={setOpen}>

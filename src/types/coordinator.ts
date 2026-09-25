@@ -7,6 +7,8 @@ export type Coordinator = {
   rackAssigned: number;
   rackFinished: number;
   status: CoordinatorStatus;
+  sessionCode?: string;
+  sessionLocation?: string;
 };
 
 export type CoordinatorUpdateRequest = { status: CoordinatorStatus };

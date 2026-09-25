@@ -249,6 +249,12 @@ export default function CoorPage() {
             </Breadcrumb>
             <h1 className="text-2xl font-bold mt-2">{coordinator.code}</h1>
             <StatusBadge className="my-2" status={coordinator.status} />
+            {(coordinator.sessionCode ?? sessionData?.code) && (
+              <p className="text-muted-foreground text-sm">
+                {coordinator.sessionCode ?? sessionData?.code}
+                {(coordinator.sessionLocation ?? sessionData?.location) ? ` · ${coordinator.sessionLocation ?? sessionData?.location}` : ""}
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap gap-2 sm:gap-5">
             <div className="flex flex-wrap gap-2">
@@ -371,6 +377,8 @@ export default function CoorPage() {
                 id: coordinator.id,
                 code: coordinator.code,
                 status: coordinator.status,
+                sessionCode: coordinator.sessionCode ?? sessionData?.code,
+                sessionLocation: coordinator.sessionLocation ?? sessionData?.location,
               }
             : null
         }

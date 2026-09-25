@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type Ref } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,14 @@ export type CoordinatorQRInfo = {
   id: number;
   code: string;
   status: string;
+  sessionCode?: string;
+  sessionLocation?: string;
 };
 
 type CoordinatorQRFigureProps = {
   coordinator: CoordinatorQRInfo;
   size?: number;
-  svgRef?: React.Ref<SVGSVGElement>;
+  svgRef?: Ref<SVGSVGElement>;
   showMeta?: boolean;
 };
 
@@ -51,6 +53,7 @@ export function CoordinatorQRFigure({
       {showMeta && (
         <div className="flex flex-col items-center gap-1.5 text-center">
           <p className="text-base font-semibold">{coordinator.code}</p>
+          {coordinator.sessionCode && <p className="text-muted-foreground text-xs">{coordinator.sessionCode}{coordinator.sessionLocation ? ` · ${coordinator.sessionLocation}` : ""}</p>}
           <StatusBadge status={coordinator.status} />
         </div>
       )}

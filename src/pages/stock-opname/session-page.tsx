@@ -274,7 +274,7 @@ export default function SessionPage() {
         </CardHeader>
         <CardContent>
           <CoordinatorTable
-            columns={createCoordinatorColumns(sessionId!)}
+            columns={createCoordinatorColumns(sessionId ?? "")}
             data={coordinators}
           />
         </CardContent>
