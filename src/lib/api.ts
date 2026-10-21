@@ -4,17 +4,36 @@ if (!API_URL) {
 }
 const API_BASE_URL = API_URL.replace(/\/$/, "");
 
+async function timedFetch(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  try {
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "TimeoutError") {
+      throw new Error("Permintaan timeout. Coba lagi.", { cause: error });
+    }
+    throw error;
+  }
+}
+
 export async function api<T>(
   endpoint: string,
   options?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
+  const response = await timedFetch(
+    `${API_BASE_URL}${endpoint}`,
+    {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+      },
     },
-  });
+    15_000,
+  );
 
   if (!response.ok) {
     let message = `API Error: ${response.status}`;
@@ -33,7 +52,7 @@ export async function api<T>(
 }
 
 export async function apiBlob(endpoint: string): Promise<Blob> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`);
+  const response = await timedFetch(`${API_BASE_URL}${endpoint}`, {}, 30_000);
   if (!response.ok) {
     let message = `API Error: ${response.status}`;
     try {
@@ -50,7 +69,11 @@ export async function apiBlob(endpoint: string): Promise<Blob> {
 }
 
 export async function apiForm<T>(endpoint: string, form: FormData, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, method: options?.method ?? "POST", body: form });
+  const response = await timedFetch(
+    `${API_BASE_URL}${endpoint}`,
+    { ...options, method: options?.method ?? "POST", body: form },
+    120_000,
+  );
 
   if (!response.ok) {
     let message = `API Error: ${response.status}`;

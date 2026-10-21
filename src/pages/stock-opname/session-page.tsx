@@ -171,6 +171,12 @@ export default function SessionPage() {
     }
   };
 
+  if (!Number.isFinite(id)) {
+    return (
+      <div className="p-4 text-destructive">ID sesi tidak valid.</div>
+    );
+  }
+
   if (loading && !session) {
     return (
       <div className="flex h-full min-h-[50vh] items-center justify-center">

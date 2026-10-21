@@ -199,6 +199,14 @@ export default function CoorPage() {
     }
   };
 
+  if (!Number.isFinite(id) || !Number.isFinite(session)) {
+    return (
+      <div className="p-4 text-destructive">
+        ID sesi atau koordinator tidak valid.
+      </div>
+    );
+  }
+
   if (loading && !coordinator) {
     return (
       <div className="flex h-full min-h-[50vh] items-center justify-center">
