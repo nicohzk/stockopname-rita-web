@@ -10,7 +10,7 @@ import { TruncatedText } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 import type { Product } from "@/types/product";
 
-export default function ProductBarcodeTable({ products, onUpdateBarcodes }: { products: Product[]; onUpdateBarcodes: (id: number, barcodes: string[]) => Promise<void> }) {
+export default function ProductBarcodeTable({ products, onUpdateBarcodes, readOnly = false }: { products: Product[]; onUpdateBarcodes: (id: number, barcodes: string[]) => Promise<void>; readOnly?: boolean }) {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Product | null>(null);
   const [draft, setDraft] = useState<string[]>([]);
@@ -31,7 +31,7 @@ export default function ProductBarcodeTable({ products, onUpdateBarcodes }: { pr
   };
 
   const handleSave = async () => {
-    if (!editing) return;
+    if (!editing || readOnly) return;
     setSaving(true);
     try {
       await onUpdateBarcodes(editing.id, draft);
@@ -73,7 +73,7 @@ export default function ProductBarcodeTable({ products, onUpdateBarcodes }: { pr
                   <TableCell><TruncatedText>{p.name}</TruncatedText></TableCell>
                   <TableCell><TruncatedText>{p.barcode || "-"}</TruncatedText></TableCell>
                   <TableCell><TruncatedText>{p.barcodes.length ? p.barcodes.join(", ") : "-"}</TruncatedText></TableCell>
-                  <TableCell><Button variant="outline" size="sm" onClick={() => openEdit(p)}>Kelola</Button></TableCell>
+                  <TableCell><Button variant="outline" size="sm" onClick={() => openEdit(p)} disabled={readOnly}>Kelola</Button></TableCell>
                 </TableRow>
               ))}
             </TableBody>

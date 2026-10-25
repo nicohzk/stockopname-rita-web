@@ -8,7 +8,7 @@ import { TruncatedText } from "@/components/ui/table";
 
 const columnHelper = createColumnHelper<DataTableFeatures, Product>();
 
-export const getColumns = (onDelete: (id: number) => Promise<void>, onUpdate: (id: number, data: UpdateProductRequest) => Promise<void>) => columnHelper.columns([
+export const getColumns = (onDelete: (id: number) => Promise<void>, onUpdate: (id: number, data: UpdateProductRequest) => Promise<void>, readOnly = false) => columnHelper.columns([
   columnHelper.accessor("id", { header: "ID", size: 60 }),
   columnHelper.accessor("plu", {
     header: "PLU",
@@ -42,6 +42,7 @@ export const getColumns = (onDelete: (id: number) => Promise<void>, onUpdate: (i
     header: "Actions",
     size: 60,
     cell: ({ row }) => {
+      if (readOnly) return null;
       const product = row.original;
       return (
         <div className="flex justify-center">

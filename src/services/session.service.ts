@@ -47,3 +47,7 @@ export function getSession(id: number) {
 export function updateSession(id: number, data: SessionUpdateRequest) {
   return api<ApiResponse<null>>(`/stockopname/sessions/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 }
+
+export function deleteSession(id: number) {
+  return api<ApiResponse<null>>(`/stockopname/sessions/${id}`, { method: "DELETE" });
+}

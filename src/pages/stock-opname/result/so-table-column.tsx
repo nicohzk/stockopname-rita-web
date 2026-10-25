@@ -8,7 +8,7 @@ import { TruncatedText } from "@/components/ui/table";
 
 const columnHelper = createColumnHelper<DataTableFeatures, StockOpname>();
 
-export const createColumns = (onUpdate: (id: number, data: StockOpnameUpdateRequest) => Promise<void>, onDelete: (id: number) => Promise<void>) => columnHelper.columns([
+export const createColumns = (onUpdate: (id: number, data: StockOpnameUpdateRequest) => Promise<void>, onDelete: (id: number) => Promise<void>, readOnly = false) => columnHelper.columns([
   columnHelper.accessor("barcode", {
     header: "Barcode",
     size: 90,
@@ -45,6 +45,7 @@ export const createColumns = (onUpdate: (id: number, data: StockOpnameUpdateRequ
     header: "Aksi",
     size: 60,
     cell: ({ row }) => {
+      if (readOnly) return null;
       return (
         <div className="flex">
           <StockOpnameTableButton item={row.original} onUpdate={(id, quantity) => onUpdate(id, { quantity })} onDelete={onDelete} />

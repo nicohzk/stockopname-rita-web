@@ -346,6 +346,7 @@ export default function CoorPage() {
             columns={createResultColumns(
               handleResultUpdate,
               handleResultDelete,
+              sessionData?.status !== "IN_PROGRESS",
             )}
             data={results}
             addButton={
@@ -353,7 +354,7 @@ export default function CoorPage() {
                 sessionId={session}
                 coordinators={coordinator ? [coordinator] : []}
                 onSubmit={handleResultCreate}
-                disabled={coordinator.status === "COMPLETED" || coordinator.status === "CANCELLED"}
+                disabled={sessionData?.status !== "IN_PROGRESS" || coordinator.status === "COMPLETED" || coordinator.status === "CANCELLED"}
               />
             }
             onSearch={setResultSearchInput}

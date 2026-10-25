@@ -1,23 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-type SummaryCardsProps = {
-  totalProducts: number;
+type StockOpnameSummaryCardsProps = {
   totalSessions: number;
   completedSessions: number;
   inProgressSessions: number;
 };
 
-export default function DashboardSummaryCards({ totalProducts, totalSessions, completedSessions, inProgressSessions }: SummaryCardsProps) {
+export default function StockOpnameSummaryCards({ totalSessions, completedSessions, inProgressSessions }: StockOpnameSummaryCardsProps) {
   return (
-    <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Total Produk</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-bold">{totalProducts}</p>
-        </CardContent>
-      </Card>
+    <div className="grid gap-4 sm:grid-cols-3">
       <Card>
         <CardHeader>
           <CardTitle>Total Sesi</CardTitle>

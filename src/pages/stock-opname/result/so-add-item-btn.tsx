@@ -57,7 +57,7 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
 
   useEffect(() => {
     if (open) {
-      void getProducts(1, 20, productSearch).then((result) => setProducts(result.data)).catch((error: unknown) => showToast(error instanceof Error ? error.message : "Gagal memuat data produk.", "error"));
+      void getProducts(sessionId, 1, 20, productSearch).then((result) => setProducts(result.data)).catch((error: unknown) => showToast(error instanceof Error ? error.message : "Gagal memuat data produk.", "error"));
     }
   }, [open, productSearch, showToast]);
 
