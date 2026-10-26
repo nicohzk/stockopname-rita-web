@@ -27,7 +27,7 @@ import { CoordinatorTable } from "./coordinator/coordinator-table";
 import { createColumns as createCoordinatorColumns } from "./coordinator/coordinator-table-column";
 import { StockOpnameTable } from "./result/so-table";
 import { createColumns as createResultColumns } from "./result/so-table-column";
-import ProductTabs from "./session/product/product-tabs";
+import ProductMasterCard from "./session/product/product-master-card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type {
@@ -326,7 +326,7 @@ export default function SessionPage() {
         </div>
       )}
       <div className="my-5">
-        <ProductTabs
+        <ProductMasterCard
           sessionId={id}
           sessionStatus={session.status}
           onProductsChanged={refreshProductCount}

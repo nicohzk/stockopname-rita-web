@@ -1,16 +1,16 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading";
 import ProductTable from "./product-table";
-import ProductBarcodeTable from "./product-barcode-table";
-import { ProductImportCard, ProductClearCard } from "./product-master-tools";
 import { useEffect, useState } from "react";
-import { getProducts, createProduct, deleteProduct, updateProduct, updateProductBarcodes } from "@/services/product.service";
+import { useNavigate } from "react-router-dom";
+import { getProducts, createProduct, deleteProduct, updateProduct } from "@/services/product.service";
 import type { CreateProductRequest, UpdateProductRequest } from "@/types/product";
 import { getColumns } from "./product-table-column";
 import ProductAddButton from "./product-add-btn";
 import { useToast } from "@/components/ui/toast";
 
-export default function ProductTabs({
+export default function ProductMasterCard({
   sessionId,
   sessionStatus,
   onProductsChanged,
@@ -27,6 +27,7 @@ export default function ProductTabs({
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const readOnly = sessionStatus !== "IN_PROGRESS";
 
   const loadData = async (nextPage = page, nextSearch = search) => {
@@ -72,56 +73,42 @@ export default function ProductTabs({
       showToast("Produk berhasil diperbarui.");
     } catch (mutationError) { showToast(mutationError instanceof Error ? mutationError.message : "Gagal memperbarui produk.", "error"); throw mutationError; }
   };
-  const handleUpdateBarcodes = async (id: number, barcodes: string[]) => {
-    try {
-      await updateProductBarcodes(id, sessionId, barcodes);
-      await loadData();
-      onProductsChanged?.();
-    } catch (mutationError) { showToast(mutationError instanceof Error ? mutationError.message : "Gagal memperbarui barcode.", "error"); throw mutationError; }
-  };
-
-  const handleChanged = () => {
-    void loadData();
-    onProductsChanged?.();
-  };
 
   return (
-    <div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Master Produk</CardTitle>
-          <CardDescription>
-            Kelola produk (PLU) dan barcode untuk sesi ini.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading && !products.length ? (
-            <div className="flex h-40 items-center justify-center">
-              <LoadingSpinner message="Memuat data produk..." />
-            </div>
-          ) : (
-            <ProductTable
-              columns={getColumns(handleDelete, handleUpdate, readOnly)}
-              data={products}
-              addButton={readOnly ? null : <ProductAddButton onSubmit={handleCreate} />}
-              error={error}
-              onSearch={setSearchInput}
-              searchValue={searchInput}
-              page={page}
-              totalPages={totalPages}
-              onPageChange={setPage}
-              loading={loading}
-            />
-          )}
-        </CardContent>
-      </Card>
-      <ProductBarcodeTable products={products} onUpdateBarcodes={handleUpdateBarcodes} readOnly={readOnly} />
-      {!readOnly && (
-        <>
-          <ProductImportCard sessionId={sessionId} onImported={handleChanged} />
-          <ProductClearCard sessionId={sessionId} onCleared={handleChanged} />
-        </>
-      )}
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Master Produk</CardTitle>
+        <CardDescription>
+          Kelola produk (PLU) dan barcode untuk sesi ini.
+        </CardDescription>
+        {!readOnly && (
+          <CardAction>
+            <Button variant="outline" onClick={() => navigate(`/stock-opname/sesi/${sessionId}/produk`)}>
+              Kelola Master Produk
+            </Button>
+          </CardAction>
+        )}
+      </CardHeader>
+      <CardContent>
+        {loading && !products.length ? (
+          <div className="flex h-40 items-center justify-center">
+            <LoadingSpinner message="Memuat data produk..." />
+          </div>
+        ) : (
+          <ProductTable
+            columns={getColumns(handleDelete, handleUpdate, readOnly)}
+            data={products}
+            addButton={readOnly ? null : <ProductAddButton onSubmit={handleCreate} />}
+            error={error}
+            onSearch={setSearchInput}
+            searchValue={searchInput}
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            loading={loading}
+          />
+        )}
+      </CardContent>
+    </Card>
   );
 }

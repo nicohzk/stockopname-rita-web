@@ -4,6 +4,7 @@ import MainLayout from "./components/layout/main-layout";
 import StockOpnamePage from "./pages/stock-opname/stock-opname-page";
 import SessionPage from "./pages/stock-opname/session-page";
 import CoorPage from "./pages/stock-opname/coor-page";
+import ProductPage from "./pages/stock-opname/product-page";
 import { ToastProvider } from "./components/ui/toast";
 import { TooltipProvider } from "./components/ui/tooltip";
 
@@ -19,6 +20,10 @@ function App() {
           <Route
             path="/stock-opname/sesi/:sessionId"
             element={<SessionPage />}
+          />
+          <Route
+            path="/stock-opname/sesi/:sessionId/produk"
+            element={<ProductPage />}
           />
           <Route
             path="/stock-opname/sesi/:sessionId/coordinator/:coorId"

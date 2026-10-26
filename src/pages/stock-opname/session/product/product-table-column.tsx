@@ -15,11 +15,6 @@ export const getColumns = (onDelete: (id: number) => Promise<void>, onUpdate: (i
     size: 110,
     cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
-  columnHelper.accessor("barcode", {
-    header: "Barcode Utama",
-    size: 130,
-    cell: (info) => <TruncatedText>{info.getValue() || "-"}</TruncatedText>,
-  }),
   columnHelper.accessor("name", {
     header: "Name",
     size: 200,

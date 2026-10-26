@@ -6,7 +6,6 @@ function mapProduct(product: ProductResponse): Product {
   return {
     id: product.id,
     plu: product.plu,
-    barcode: product.barcode ?? "",
     barcodes: product.barcodes ?? [],
     name: product.name,
     buyPrice: product.buy_price,
@@ -31,7 +30,7 @@ export async function getProductCount(sessionId: number) {
 export async function createProduct(sessionId: number, data: CreateProductRequest) {
   const response = await api<ApiResponse<ProductResponse>>("/products", {
     method: "POST",
-    body: JSON.stringify({ sesi_id: sessionId, plu: data.plu, name: data.name, buy_price: data.buyPrice, sell_price: data.sellPrice, department_code: data.departmentCode }),
+    body: JSON.stringify({ sesi_id: sessionId, plu: data.plu, name: data.name, buy_price: data.buyPrice, sell_price: data.sellPrice, department_code: data.departmentCode, barcodes: data.barcodes }),
   });
   return mapProduct(response.data);
 }
@@ -45,10 +44,6 @@ export async function updateProduct(
     method: "PATCH",
     body: JSON.stringify({ plu: data.plu, name: data.name, buy_price: data.buyPrice, sell_price: data.sellPrice, department_code: data.departmentCode, barcodes: data.barcodes }),
   });
-}
-
-export async function updateProductBarcodes(id: number, sessionId: number, barcodes: string[]) {
-  return updateProduct(id, sessionId, { barcodes });
 }
 
 export async function importProducts(produk: File, barcode: File, sessionId: number, dryRun = false) {
