@@ -8,12 +8,17 @@ import { TruncatedText } from "@/components/ui/table";
 
 const columnHelper = createColumnHelper<DataTableFeatures, Product>();
 
-export const getColumns = (onDelete: (id: number) => Promise<void>, onUpdate: (id: number, data: UpdateProductRequest) => Promise<void>, readOnly = false) => columnHelper.columns([
+const fields = columnHelper.columns([
   columnHelper.accessor("id", { header: "ID", size: 60 }),
   columnHelper.accessor("plu", {
     header: "PLU",
-    size: 110,
+    size: 70,
     cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
+  }),
+  columnHelper.accessor("barcodes", {
+    header: "Barcode",
+    size: 160,
+    cell: (info) => <TruncatedText>{info.getValue().join(", ") || "-"}</TruncatedText>,
   }),
   columnHelper.accessor("name", {
     header: "Name",
@@ -32,18 +37,25 @@ export const getColumns = (onDelete: (id: number) => Promise<void>, onUpdate: (i
     size: 130,
     cell: (info) => formatDateTime(info.getValue()),
   }),
-  columnHelper.display({
-    id: "actions",
-    header: "Actions",
-    size: 60,
-    cell: ({ row }) => {
-      if (readOnly) return null;
-      const product = row.original;
-      return (
-        <div className="flex justify-center">
-          <ProductTableButton product={product} onDelete={onDelete} onUpdate={onUpdate}/>
-        </div>
-      );
-    },
-  }),
+]);
+
+export const barcodeColumns = fields;
+
+export const getColumns = (onDelete: (id: number) => Promise<void>, onUpdate: (id: number, data: UpdateProductRequest) => Promise<void>, readOnly = false) => columnHelper.columns([
+  ...fields,
+  ...(readOnly ? [] : [
+    columnHelper.display({
+      id: "actions",
+      header: "Actions",
+      size: 60,
+      cell: ({ row }) => {
+        const product = row.original;
+        return (
+          <div className="flex justify-center">
+            <ProductTableButton product={product} onDelete={onDelete} onUpdate={onUpdate}/>
+          </div>
+        );
+      },
+    }),
+  ]),
 ]);
