@@ -12,7 +12,8 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { AlertDialog } from "@/components/ui/alert-dialog";
-import { getSession, updateSession } from "@/services/session.service";
+import { getSession, updateSession, deleteSession } from "@/services/session.service";
+import { getProductCount } from "@/services/product.service";
 import { getCoordinators } from "@/services/coordinator.service";
 import { getRackProgress } from "@/services/rack.service";
 import {
@@ -26,6 +27,9 @@ import { CoordinatorTable } from "./coordinator/coordinator-table";
 import { createColumns as createCoordinatorColumns } from "./coordinator/coordinator-table-column";
 import { StockOpnameTable } from "./result/so-table";
 import { createColumns as createResultColumns } from "./result/so-table-column";
+import ProductMasterCard from "./session/product/product-master-card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import type {
   StockOpnameCreateRequest,
   StockOpnameUpdateRequest,
@@ -65,12 +69,17 @@ export default function SessionPage() {
   const [error, setError] = useState<string>();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<"COMPLETED" | "CANCELLED">("COMPLETED");
+  const [productCount, setProductCount] = useState(0);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteCode, setDeleteCode] = useState("");
+  const [deleteError, setDeleteError] = useState<string>();
+  const [deleting, setDeleting] = useState(false);
 
   const loadData = async () => {
     try {
       setLoading(true);
       setError(undefined);
-      const [loadedSession, loadedCoordinators, loadedResults, loadedProgress] =
+      const [loadedSession, loadedCoordinators, loadedResults, loadedProgress, loadedProductCount] =
         await Promise.all([
           getSession(id),
           getCoordinators(id),
@@ -80,6 +89,7 @@ export default function SessionPage() {
             search: resultSearch,
           }),
           getRackProgress({ sessionId: id }),
+          getProductCount(id),
         ]);
       setSession(loadedSession);
       setCoordinators(loadedCoordinators);
@@ -87,6 +97,7 @@ export default function SessionPage() {
       setResultPage(loadedResults.pagination.page);
       setResultTotalPages(loadedResults.pagination.total_pages || 1);
       setProgress(loadedProgress);
+      setProductCount(loadedProductCount);
     } catch (loadError) {
       setError(
         loadError instanceof Error
@@ -95,6 +106,33 @@ export default function SessionPage() {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshProductCount = async () => {
+    try {
+      setProductCount(await getProductCount(id));
+    } catch {
+      // Count refresh is best-effort; the next loadData retries.
+    }
+  };
+
+  const handleDeleteSession = async () => {
+    setDeleting(true);
+    setDeleteError(undefined);
+    try {
+      await deleteSession(id);
+      showToast("Sesi berhasil dihapus.");
+      navigate("/stock-opname");
+    } catch (mutationError) {
+      const message =
+        mutationError instanceof Error
+          ? mutationError.message
+          : "Gagal menghapus sesi.";
+      setDeleteError(message);
+      showToast(message, "error");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -171,6 +209,12 @@ export default function SessionPage() {
     }
   };
 
+  if (!Number.isFinite(id)) {
+    return (
+      <div className="p-4 text-destructive">ID sesi tidak valid.</div>
+    );
+  }
+
   if (loading && !session) {
     return (
       <div className="flex h-full min-h-[50vh] items-center justify-center">
@@ -216,7 +260,8 @@ export default function SessionPage() {
               <Button
                 variant="default"
                 onClick={() => { setPendingAction("COMPLETED"); setConfirmOpen(true); }}
-                disabled={session.status !== "IN_PROGRESS"}
+                disabled={session.status !== "IN_PROGRESS" || productCount === 0}
+                title={productCount === 0 ? "Sesi belum punya produk." : undefined}
               >
                 Selesai
               </Button>
@@ -227,6 +272,14 @@ export default function SessionPage() {
               >
                 Batal
               </Button>
+              {(session.status !== "IN_PROGRESS" || productCount === 0) && (
+                <Button
+                  variant="destructive"
+                  onClick={() => { setDeleteCode(""); setDeleteError(undefined); setDeleteOpen(true); }}
+                >
+                  Hapus Sesi
+                </Button>
+              )}
             </div>
             <SessionExportMenu sessionId={id} sessionCode={session.code} />
             <Button
@@ -267,6 +320,18 @@ export default function SessionPage() {
           </CardContent>
         </Card>
       </div>
+      {session.status === "IN_PROGRESS" && productCount === 0 && (
+        <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Sesi belum punya produk. Join koordinator dan scan hasil stock opname diblokir sampai produk diimpor atau ditambahkan. Sesi juga tidak bisa diselesaikan.
+        </div>
+      )}
+      <div className="my-5">
+        <ProductMasterCard
+          sessionId={id}
+          sessionStatus={session.status}
+          onProductsChanged={refreshProductCount}
+        />
+      </div>
       <Card className="my-5">
         <CardHeader>
           <CardTitle>Data Koordinator</CardTitle>
@@ -289,6 +354,7 @@ export default function SessionPage() {
             columns={createResultColumns(
               handleResultUpdate,
               handleResultDelete,
+              session.status !== "IN_PROGRESS",
             )}
             data={results}
             addButton={
@@ -321,6 +387,34 @@ export default function SessionPage() {
         destructive={pendingAction === "CANCELLED"}
         onConfirm={() => changeStatus(pendingAction)}
       />
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Hapus Sesi?</DialogTitle>
+            <DialogDescription>
+              Sesi <b>{session.code}</b> dan seluruh datanya (produk, barcode, rak, koordinator, hasil stock opname) akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={deleteCode}
+            onChange={(event) => setDeleteCode(event.target.value)}
+            placeholder={`Ketik ${session.code} untuk konfirmasi`}
+          />
+          {deleteError ? <p className="text-sm text-destructive">{deleteError}</p> : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)} disabled={deleting}>
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleting || deleteCode !== session.code}
+              onClick={() => void handleDeleteSession()}
+            >
+              {deleting ? "Menghapus..." : "Hapus Sesi"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

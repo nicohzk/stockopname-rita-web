@@ -12,14 +12,10 @@ import {
 import { cn } from "@/lib/utils";
 import {
   ClipboardList,
-  LayoutDashboard,
-  Package,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 const menuItems = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/master", label: "Master Data", icon: Package },
   { to: "/stock-opname", label: "Stock Opname", icon: ClipboardList },
 ];
 
@@ -57,7 +53,6 @@ export default function AppSidebar() {
                 <SidebarMenuItem key={to}>
                   <NavLink
                     to={to}
-                    end={to === "/"}
                     className={({ isActive }) =>
                       cn(
                         "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",

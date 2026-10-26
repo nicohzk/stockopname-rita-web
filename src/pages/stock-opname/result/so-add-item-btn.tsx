@@ -6,11 +6,9 @@ import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/toast";
-import { getInspectors } from "@/services/inspector.service";
 import { getProducts } from "@/services/product.service";
 import { getRacks } from "@/services/rack.service";
 import type { Coordinator } from "@/types/coordinator";
-import type { Inspector } from "@/types/inspector";
 import type { Product } from "@/types/product";
 import type { Rack } from "@/types/rack";
 import type { StockOpnameCreateRequest } from "@/types/stock-opname";
@@ -20,10 +18,8 @@ type Option = { value: string; label: string };
 export default function StockOpnameAddItemButton({ sessionId, coordinators, onSubmit, disabled = false }: { sessionId: number; coordinators: Coordinator[]; onSubmit: (data: StockOpnameCreateRequest) => Promise<void>; disabled?: boolean }) {
   const [open, setOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [inspectors, setInspectors] = useState<Inspector[]>([]);
   const [racks, setRacks] = useState<Rack[]>([]);
   const [coordinator, setCoordinator] = useState<Option | null>(null);
-  const [inspector, setInspector] = useState<Option | null>(null);
   const [rack, setRack] = useState<Option | null>(null);
   const [product, setProduct] = useState<Option | null>(null);
   const [scannedBarcode, setScannedBarcode] = useState("");
@@ -36,14 +32,12 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
 
   const resetForm = () => {
     setCoordinator(null);
-    setInspector(null);
     setRack(null);
     setProduct(null);
     setScannedBarcode("");
     setProductSearchInput("");
     setProductSearch("");
     setQuantity("");
-    setInspectors([]);
     setRacks([]);
     setProducts([]);
     setValidationError(undefined);
@@ -57,9 +51,9 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
 
   useEffect(() => {
     if (open) {
-      void getProducts(1, 20, productSearch).then((result) => setProducts(result.data)).catch((error: unknown) => showToast(error instanceof Error ? error.message : "Gagal memuat data produk.", "error"));
+      void getProducts(sessionId, 1, 20, productSearch).then((result) => setProducts(result.data)).catch((error: unknown) => showToast(error instanceof Error ? error.message : "Gagal memuat data produk.", "error"));
     }
-  }, [open, productSearch, showToast]);
+  }, [open, productSearch, showToast, sessionId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -69,14 +63,9 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
   }, [productSearchInput]);
 
   useEffect(() => {
-    setInspector(null); setRack(null); setInspectors([]); setRacks([]);
-    if (coordinator) void getInspectors(Number(coordinator.value)).then(setInspectors).catch((error: unknown) => showToast(error instanceof Error ? error.message : "Gagal memuat data inspektur.", "error"));
-  }, [coordinator, showToast]);
-
-  useEffect(() => {
     setRack(null); setRacks([]);
-    if (inspector && coordinator) void getRacks({ sessionId, coordinatorId: Number(coordinator.value), inspectorId: Number(inspector.value) }).then(setRacks).catch((error: unknown) => showToast(error instanceof Error ? error.message : "Gagal memuat data rak.", "error"));
-  }, [inspector, coordinator, sessionId, showToast]);
+    if (coordinator) void getRacks({ sessionId, coordinatorId: Number(coordinator.value) }).then(setRacks).catch((error: unknown) => showToast(error instanceof Error ? error.message : "Gagal memuat data rak.", "error"));
+  }, [coordinator, sessionId, showToast]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -108,8 +97,7 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
         <DialogHeader><DialogTitle>Tambah Item</DialogTitle><Separator /></DialogHeader>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2"><Label>Koordinator</Label><Combobox items={coordinators.map((item) => ({ value: String(item.id), label: item.code }))} value={coordinator} onValueChange={(value) => setCoordinator(value as Option | null)} itemToStringValue={(item: Option) => item.label}><ComboboxInput placeholder="Pilih koordinator" /><ComboboxContent><ComboboxEmpty>Tidak ada data.</ComboboxEmpty><ComboboxList>{(item) => <ComboboxItem key={item.value} value={item}>{item.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox></div>
-          <div className="space-y-2"><Label>Inspektur</Label><Combobox items={inspectors.map((item) => ({ value: String(item.id), label: item.code }))} value={inspector} onValueChange={(value) => setInspector(value as Option | null)} disabled={!coordinator} itemToStringValue={(item: Option) => item.label}><ComboboxInput placeholder="Pilih inspektur" /><ComboboxContent><ComboboxEmpty>Tidak ada data.</ComboboxEmpty><ComboboxList>{(item) => <ComboboxItem key={item.value} value={item}>{item.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox></div>
-          <div className="space-y-2"><Label>Rak</Label><Combobox items={racks.map((item) => ({ value: String(item.id), label: item.name }))} value={rack} onValueChange={(value) => setRack(value as Option | null)} disabled={!inspector} itemToStringValue={(item: Option) => item.label}><ComboboxInput placeholder="Pilih rak" /><ComboboxContent><ComboboxEmpty>Tidak ada data.</ComboboxEmpty><ComboboxList>{(item) => <ComboboxItem key={item.value} value={item}>{item.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox></div>
+          <div className="space-y-2"><Label>Rak</Label><Combobox items={racks.map((item) => ({ value: String(item.id), label: item.name }))} value={rack} onValueChange={(value) => setRack(value as Option | null)} disabled={!coordinator} itemToStringValue={(item: Option) => item.label}><ComboboxInput placeholder="Pilih rak" /><ComboboxContent><ComboboxEmpty>Tidak ada data.</ComboboxEmpty><ComboboxList>{(item) => <ComboboxItem key={item.value} value={item}>{item.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox></div>
           <div className="space-y-2">
             <Label htmlFor="so-barcode">Scan Barcode</Label>
             <Input id="so-barcode" value={scannedBarcode} onChange={(e) => { setScannedBarcode(e.target.value); setValidationError(undefined); }} placeholder="Scan / ketik barcode…" autoFocus />

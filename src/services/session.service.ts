@@ -35,7 +35,11 @@ export function createSession(data: SessionCreateRequest) {
     body: JSON.stringify({
       sesi_code: data.code,
       location: data.location,
-      coor_code: data.coordinatorCodes,
+      coordinators: data.coordinators.map((coordinator) => ({
+        code: coordinator.code,
+        rack_start: coordinator.rackStart,
+        rack_end: coordinator.rackEnd,
+      })),
     }),
   }).then((response) => mapSession(response.data));
 }
@@ -46,4 +50,8 @@ export function getSession(id: number) {
 
 export function updateSession(id: number, data: SessionUpdateRequest) {
   return api<ApiResponse<null>>(`/stockopname/sessions/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+}
+
+export function deleteSession(id: number) {
+  return api<ApiResponse<null>>(`/stockopname/sessions/${id}`, { method: "DELETE" });
 }

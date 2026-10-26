@@ -25,8 +25,8 @@ import {
   getCoordinator,
   updateCoordinator,
 } from "@/services/coordinator.service";
-import { getInspectors } from "@/services/inspector.service";
-import { getRackProgress } from "@/services/rack.service";
+import { deleteRack, getRackProgress, getRacks } from "@/services/rack.service";
+import { getUploads } from "@/services/upload.service";
 import {
   createStockOpname,
   deleteStockOpname,
@@ -34,15 +34,20 @@ import {
   updateStockOpname,
 } from "@/services/stock-opname.service";
 import StockOpnameAddItemButton from "./result/so-add-item-btn";
-import { InspectorTable } from "./inspector/inspector-table";
-import { columns as inspectorColumns } from "./inspector/inspector-table.column";
+import { RackTable } from "./rack/rack-table";
+import { createColumns as createRackColumns } from "./rack/rack-table-column";
+import { UploadTable } from "./upload/upload-table";
+import { createColumns as createUploadColumns } from "./upload/upload-table-column";
 import { StockOpnameTable } from "./result/so-table";
 import { createColumns as createResultColumns } from "./result/so-table-column";
 import type {
   StockOpnameCreateRequest,
   StockOpnameUpdateRequest,
 } from "@/types/stock-opname";
+import type { Rack } from "@/types/rack";
+import type { Upload } from "@/types/upload";
 import CoordinatorPrintMenu from "./coordinator-print-menu";
+import { openUploadReport } from "@/services/report.service";
 import { StatusBadge } from "@/components/ui/status-badge";
 import CoordinatorQRModal from "@/components/CoordinatorQRModal";
 
@@ -56,9 +61,8 @@ export default function CoorPage() {
     useState<Awaited<ReturnType<typeof getSession>>>();
   const [coordinator, setCoordinator] =
     useState<Awaited<ReturnType<typeof getCoordinator>>>();
-  const [inspectors, setInspectors] = useState<
-    Awaited<ReturnType<typeof getInspectors>>
-  >([]);
+  const [racks, setRacks] = useState<Rack[]>([]);
+  const [uploads, setUploads] = useState<Upload[]>([]);
   const [results, setResults] = useState<
     Awaited<ReturnType<typeof getStockOpnames>>["data"]
   >([]);
@@ -82,13 +86,11 @@ export default function CoorPage() {
       const [
         loadedSession,
         loadedCoordinator,
-        loadedInspectors,
         loadedResults,
         loadedProgress,
       ] = await Promise.all([
         getSession(session),
         getCoordinator(id),
-        getInspectors(id),
         getStockOpnames({
           sessionId: session,
           coordinatorId: id,
@@ -97,9 +99,18 @@ export default function CoorPage() {
         }),
         getRackProgress({ sessionId: session, coordinatorId: id }),
       ]);
+      const [racksResult, uploadsResult] = await Promise.allSettled([
+        getRacks({ sessionId: session, coordinatorId: id }),
+        getUploads(id),
+      ]);
       setSessionData(loadedSession);
       setCoordinator(loadedCoordinator);
-      setInspectors(loadedInspectors);
+      const allRacks = racksResult.status === "fulfilled" ? racksResult.value : [];
+      setRacks(allRacks);
+      setUploads(uploadsResult.status === "fulfilled" ? uploadsResult.value : []);
+      if (uploadsResult.status === "rejected") {
+        showToast("Gagal memuat riwayat upload.", "error");
+      }
       setResults(loadedResults.data);
       setResultPage(loadedResults.pagination.page);
       setResultTotalPages(loadedResults.pagination.total_pages || 1);
@@ -198,6 +209,38 @@ export default function CoorPage() {
       throw mutationError;
     }
   };
+
+  const handleOpenUploadReport = async (uploadId: number) => {
+    try {
+      await openUploadReport(uploadId);
+    } catch (mutationError) {
+      showToast(
+        mutationError instanceof Error ? mutationError.message : "Gagal membuat PDF upload.",
+        "error",
+      );
+    }
+  };
+  const handleDeleteRack = async (rakId: number) => {
+    try {
+      await deleteRack(rakId);
+      await loadData();
+      showToast("Rak berhasil dihapus.");
+    } catch (mutationError) {
+      showToast(
+        mutationError instanceof Error ? mutationError.message : "Gagal menghapus rak.",
+        "error",
+      );
+      throw mutationError;
+    }
+  };
+
+  if (!Number.isFinite(id) || !Number.isFinite(session)) {
+    return (
+      <div className="p-4 text-destructive">
+        ID sesi atau koordinator tidak valid.
+      </div>
+    );
+  }
 
   if (loading && !coordinator) {
     return (
@@ -321,11 +364,29 @@ export default function CoorPage() {
       </div>
       <Card className="my-5">
         <CardHeader>
-          <CardTitle>Data Inspektur</CardTitle>
-          <CardDescription>Daftar inspektur yang bertugas dalam koordinator ini</CardDescription>
+          <CardTitle>Riwayat Upload</CardTitle>
+          <CardDescription>Setiap submit mobile dicatat sebagai satu upload</CardDescription>
         </CardHeader>
         <CardContent>
-          <InspectorTable columns={inspectorColumns} data={inspectors} />
+          <UploadTable
+            columns={createUploadColumns(handleOpenUploadReport)}
+            data={uploads}
+          />
+        </CardContent>
+      </Card>
+      <Card className="my-5">
+        <CardHeader>
+          <CardTitle>Daftar Rak</CardTitle>
+          <CardDescription>Rak yang belum diupload masih bisa dihapus</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RackTable
+            columns={createRackColumns(
+              handleDeleteRack,
+              sessionData?.status !== "IN_PROGRESS",
+            )}
+            data={racks}
+          />
         </CardContent>
       </Card>
       <Card className="my-5">
@@ -338,6 +399,7 @@ export default function CoorPage() {
             columns={createResultColumns(
               handleResultUpdate,
               handleResultDelete,
+              sessionData?.status !== "IN_PROGRESS",
             )}
             data={results}
             addButton={
@@ -345,7 +407,7 @@ export default function CoorPage() {
                 sessionId={session}
                 coordinators={coordinator ? [coordinator] : []}
                 onSubmit={handleResultCreate}
-                disabled={coordinator.status === "COMPLETED" || coordinator.status === "CANCELLED"}
+                disabled={sessionData?.status !== "IN_PROGRESS" || coordinator.status === "COMPLETED" || coordinator.status === "CANCELLED"}
               />
             }
             onSearch={setResultSearchInput}

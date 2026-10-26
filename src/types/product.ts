@@ -1,7 +1,6 @@
 export type Product = {
   id: number;
   plu: string;
-  barcode: string;
   barcodes: string[];
   name: string;
   buyPrice: number;
@@ -16,6 +15,7 @@ export type CreateProductRequest = {
   buyPrice: number;
   sellPrice: number;
   departmentCode: string;
+  barcodes?: string[];
 };
 
 export type UpdateProductRequest = {
@@ -30,7 +30,6 @@ export type UpdateProductRequest = {
 export type ProductResponse = {
   id: number;
   plu: string;
-  barcode: string;
   barcodes: string[];
   name: string;
   buy_price: number;

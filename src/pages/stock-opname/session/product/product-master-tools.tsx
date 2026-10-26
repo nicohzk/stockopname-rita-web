@@ -8,7 +8,7 @@ import { useToast } from "@/components/ui/toast";
 import { clearProducts, importProducts } from "@/services/product.service";
 import type { ImportResult } from "@/types/product";
 
-export function ProductImportCard({ onImported }: { onImported: () => void }) {
+export function ProductImportCard({ sessionId, onImported }: { sessionId: number; onImported: () => void }) {
   const [produk, setProduk] = useState<File | null>(null);
   const [barcode, setBarcode] = useState<File | null>(null);
   const [dryRun, setDryRun] = useState(false);
@@ -24,7 +24,7 @@ export function ProductImportCard({ onImported }: { onImported: () => void }) {
     }
     setLoading(true);
     try {
-      const res = await importProducts(produk, barcode, dryRun);
+      const res = await importProducts(produk, barcode, sessionId, dryRun);
       setResult(res);
       showToast(dryRun ? "Validasi dry-run selesai." : "Master data berhasil diimpor.");
       if (!dryRun) onImported();
@@ -80,7 +80,7 @@ export function ProductImportCard({ onImported }: { onImported: () => void }) {
   );
 }
 
-export function ProductClearCard({ onCleared }: { onCleared: () => void }) {
+export function ProductClearCard({ sessionId, onCleared }: { sessionId: number; onCleared: () => void }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
@@ -88,8 +88,8 @@ export function ProductClearCard({ onCleared }: { onCleared: () => void }) {
   const handleConfirm = async () => {
     setLoading(true);
     try {
-      await clearProducts();
-      showToast("Master data berhasil dihapus. Riwayat SO tidak berubah.");
+      await clearProducts(sessionId);
+      showToast("Master produk sesi ini berhasil dihapus. Riwayat SO tidak berubah.");
       onCleared();
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Gagal menghapus master data.", "error");
@@ -103,15 +103,15 @@ export function ProductClearCard({ onCleared }: { onCleared: () => void }) {
     <Card className="mt-5 border-destructive/50">
       <CardHeader>
         <CardTitle className="text-destructive">Danger Zone</CardTitle>
-        <CardDescription>Hapus seluruh master produk + barcode. Riwayat stock opname tetap tersimpan (snapshot).</CardDescription>
+        <CardDescription>Hapus seluruh master produk + barcode untuk sesi ini. Riwayat stock opname tetap tersimpan (snapshot). Sesi menjadi belum siap sampai ada produk lagi.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Button variant="destructive" onClick={() => setOpen(true)} disabled={loading}>Hapus Semua Master</Button>
+        <Button variant="destructive" onClick={() => setOpen(true)} disabled={loading}>Hapus Semua Produk Sesi Ini</Button>
         <AlertDialog
           open={open}
           onOpenChange={setOpen}
-          title="Hapus seluruh master data?"
-          description="Produk dan barcode akan dihapus permanen. Riwayat SO tidak berubah. Lanjut?"
+          title="Hapus seluruh master produk sesi ini?"
+          description="Produk dan barcode sesi ini akan dihapus permanen. Riwayat SO tidak berubah. Lanjut?"
           confirmLabel="Ya, hapus"
           destructive
           onConfirm={() => void handleConfirm()}

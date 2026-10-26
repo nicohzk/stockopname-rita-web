@@ -25,11 +25,6 @@ export const createColumns = (sessionId: string) => {
     size: 150,
     cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
-  columnHelper.accessor("inspector", {
-    header: "Inspektur",
-    size: 100,
-    cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
-  }),
   columnHelper.accessor("rackAssigned", {
     header: "Rak Ditugaskan",
     size: 100,

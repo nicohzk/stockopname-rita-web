@@ -1,10 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { SubmitEvent } from "react";
+import { useState, type SubmitEvent } from "react";
 import type { CreateProductRequest, Product } from "@/types/product";
 
 export default function ProductAddForm({ onSubmit, initialData, submitLabel = "Tambah Produk" }: { onSubmit: (data: CreateProductRequest) => Promise<void>; initialData?: Product; submitLabel?: string }) {
+  const [barcodes, setBarcodes] = useState<string[]>(initialData?.barcodes ?? []);
+  const [newBarcode, setNewBarcode] = useState("");
+
   const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -14,6 +17,7 @@ export default function ProductAddForm({ onSubmit, initialData, submitLabel = "T
       departmentCode: String(formData.get("departmentCode") ?? "").trim(),
       buyPrice: Number(formData.get("buyPrice")),
       sellPrice: Number(formData.get("sellPrice")),
+      barcodes,
     });
   };
 
@@ -41,7 +45,22 @@ export default function ProductAddForm({ onSubmit, initialData, submitLabel = "T
           <Input id="sellPrice" name="sellPrice" type="number" min="0" step="any" defaultValue={initialData?.sellPrice} required />
         </div>
       </div>
-      <p className="text-muted-foreground text-xs">Barcode dikelola di tabel Barcode di bawah, bukan di form ini.</p>
+      {initialData && (
+        <div className="space-y-2">
+          <Label>Barcode</Label>
+          {barcodes.length === 0 && <p className="text-muted-foreground text-sm">Belum ada barcode.</p>}
+          {barcodes.map((b) => (
+            <div key={b} className="flex items-center justify-between gap-2 rounded-md border px-2 py-1">
+              <span className="truncate text-sm">{b}</span>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setBarcodes(barcodes.filter((x) => x !== b))}>Hapus</Button>
+            </div>
+          ))}
+          <div className="flex gap-2">
+            <Input value={newBarcode} onChange={(e) => setNewBarcode(e.target.value)} placeholder="Scan / ketik barcode" />
+            <Button type="button" variant="secondary" onClick={() => { const v = newBarcode.trim(); if (v && !barcodes.includes(v)) setBarcodes([...barcodes, v]); setNewBarcode(""); }}>Tambah</Button>
+          </div>
+        </div>
+      )}
       <Button type="submit" className="w-full">
         {submitLabel}
       </Button>
