@@ -27,10 +27,6 @@ export const createColumns = (onUpdate: (id: number, data: StockOpnameUpdateRequ
     header: "Rak",
     size: 80    ,
   }),
-  columnHelper.accessor("inspector", {
-    header: "Inspektur",
-    size: 80,
-  }),
   columnHelper.accessor("coordinator", {
     header: "Koordinator",
     size: 80,

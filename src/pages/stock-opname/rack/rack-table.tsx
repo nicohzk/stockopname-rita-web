@@ -22,7 +22,7 @@ interface DataTableProps<TData extends RowData> {
   data: TData[];
 }
 
-export function InspectorTable<TData extends RowData>({
+export function RackTable<TData extends RowData>({
   columns,
   data,
 }: DataTableProps<TData>) {
@@ -48,10 +48,10 @@ export function InspectorTable<TData extends RowData>({
     <div>
       <div className="flex flex-col gap-2 pb-2 sm:flex-row sm:items-center sm:justify-between">
         <Input
-          placeholder="Cari kode..."
-          value={(table.getColumn("code")?.getFilterValue() as string) ?? ""}
+          placeholder="Cari rak..."
+          value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
-            table.getColumn("code")?.setFilterValue(event.target.value)
+            table.getColumn("name")?.setFilterValue(event.target.value)
           }
           className="w-full sm:max-w-sm"
         />

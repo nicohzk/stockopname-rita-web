@@ -5,7 +5,6 @@ export type StockOpname = {
   quantity: number;
   updatedAt: string;
   rackName: string;
-  inspector: string;
   coordinator: string;
 };
 

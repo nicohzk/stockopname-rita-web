@@ -322,7 +322,7 @@ export default function SessionPage() {
       </div>
       {session.status === "IN_PROGRESS" && productCount === 0 && (
         <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Sesi belum punya produk. Join inspector dan scan hasil stock opname diblokir sampai produk diimpor atau ditambahkan. Sesi juga tidak bisa diselesaikan.
+          Sesi belum punya produk. Join koordinator dan scan hasil stock opname diblokir sampai produk diimpor atau ditambahkan. Sesi juga tidak bisa diselesaikan.
         </div>
       )}
       <div className="my-5">
@@ -392,7 +392,7 @@ export default function SessionPage() {
           <DialogHeader>
             <DialogTitle>Hapus Sesi?</DialogTitle>
             <DialogDescription>
-              Sesi <b>{session.code}</b> dan seluruh datanya (produk, barcode, rak, inspector, koordinator, hasil stock opname) akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.
+              Sesi <b>{session.code}</b> dan seluruh datanya (produk, barcode, rak, koordinator, hasil stock opname) akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.
             </DialogDescription>
           </DialogHeader>
           <Input

@@ -3,7 +3,6 @@ export type CoordinatorStatus = "IN_PROGRESS" | "IN_REVIEW" | "COMPLETED" | "CAN
 export type Coordinator = {
   id: number;
   code: string;
-  inspector: number;
   rackAssigned: number;
   rackFinished: number;
   status: CoordinatorStatus;

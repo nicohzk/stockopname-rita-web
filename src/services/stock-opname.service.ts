@@ -1,9 +1,9 @@
 import { api, type ApiResponse } from "@/lib/api";
 import type { Pagination, StockOpname, StockOpnameCreateRequest, StockOpnameUpdateRequest } from "@/types/stock-opname";
 
-type StockOpnameResponse = { id: number; barcode: string; product_name: string; quantity: number; rak_name: string; inspector_code: string; coor_code: string; updatedAt: string };
+type StockOpnameResponse = { id: number; barcode: string; product_name: string; quantity: number; rak_name: string; coor_code: string; updatedAt: string };
 function mapResult(item: StockOpnameResponse): StockOpname {
-  return { id: item.id, barcode: item.barcode, name: item.product_name, quantity: item.quantity, rackName: item.rak_name, inspector: item.inspector_code, coordinator: item.coor_code, updatedAt: item.updatedAt };
+  return { id: item.id, barcode: item.barcode, name: item.product_name, quantity: item.quantity, rackName: item.rak_name, coordinator: item.coor_code, updatedAt: item.updatedAt };
 }
 
 export async function getStockOpnames(params: { page?: number; limit?: number; search?: string; sessionId?: number; coordinatorId?: number } = {}) {

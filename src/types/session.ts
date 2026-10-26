@@ -12,7 +12,7 @@ export type Session = {
 export type SessionCreateRequest = {
   code: string;
   location: string;
-  coordinatorCodes: string[]
+  coordinators: { code: string; rackStart: number; rackEnd: number }[]
 }
 
 export type SessionUpdateRequest = { status: SessionStatus };

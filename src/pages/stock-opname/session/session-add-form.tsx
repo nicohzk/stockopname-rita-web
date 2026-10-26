@@ -11,7 +11,11 @@ export default function SessionAddForm({
   onSubmit: (data: SessionCreateRequest, produk: File, barcode: File) => Promise<void>;
 }) {
   const [step, setStep] = useState<1 | 2>(1);
-  const [step1, setStep1] = useState<SessionCreateRequest>({ code: "", location: "", coordinatorCodes: [""] });
+  const [step1, setStep1] = useState<SessionCreateRequest>({
+    code: "",
+    location: "",
+    coordinators: [{ code: "", rackStart: 1, rackEnd: 1 }],
+  });
   const [produk, setProduk] = useState<File | null>(null);
   const [barcode, setBarcode] = useState<File | null>(null);
   const [validationError, setValidationError] = useState<string>();
@@ -21,15 +25,43 @@ export default function SessionAddForm({
     e.preventDefault();
     const code = step1.code.trim();
     const location = step1.location.trim();
-    const codes = step1.coordinatorCodes.map((c) => c.trim()).filter(Boolean);
-    if (!code || !location || codes.length === 0) {
-      const message = "Kode, lokasi, dan minimal satu kode koordinator wajib diisi.";
+    const coordinators = step1.coordinators
+      .map((coordinator) => ({
+        code: coordinator.code.trim(),
+        rackStart: coordinator.rackStart,
+        rackEnd: coordinator.rackEnd,
+      }))
+      .filter((coordinator) => coordinator.code !== "");
+
+    const invalidRange = coordinators.some(
+      (coordinator) =>
+        !Number.isInteger(coordinator.rackStart) ||
+        !Number.isInteger(coordinator.rackEnd) ||
+        coordinator.rackStart < 1 ||
+        coordinator.rackEnd < coordinator.rackStart ||
+        coordinator.rackEnd - coordinator.rackStart + 1 > 200,
+    );
+    const sorted = [...coordinators].sort((a, b) => a.rackStart - b.rackStart);
+    const overlapping = sorted.some(
+      (coordinator, index) =>
+        index > 0 && coordinator.rackStart <= sorted[index - 1].rackEnd,
+    );
+
+    if (!code || !location || coordinators.length === 0 || invalidRange) {
+      const message =
+        "Kode, lokasi, minimal satu koordinator, dan range rak yang valid (1–200 rak) wajib diisi.";
+      setValidationError(message);
+      showToast(message, "error");
+      return;
+    }
+    if (overlapping) {
+      const message = "Range rak antar koordinator tidak boleh overlap.";
       setValidationError(message);
       showToast(message, "error");
       return;
     }
     setValidationError(undefined);
-    setStep1({ code, location, coordinatorCodes: codes });
+    setStep1({ code, location, coordinators });
     setStep(2);
   };
 
@@ -60,23 +92,47 @@ export default function SessionAddForm({
           </div>
 
           <div className="space-y-2 overflow-y-auto max-h-60">
-            <Label>Kode Koordinator</Label>
-            {step1.coordinatorCodes.map((code, index) => (
+            <Label>Koordinator &amp; Range Rak</Label>
+            {step1.coordinators.map((coordinator, index) => (
               <div key={index} className="flex gap-2">
                 <Input
                   placeholder={`Kode koordinator ${index + 1}`}
-                  value={code}
+                  value={coordinator.code}
                   onChange={(e) => {
-                    const next = [...step1.coordinatorCodes];
-                    next[index] = e.target.value;
-                    setStep1({ ...step1, coordinatorCodes: next });
+                    const next = [...step1.coordinators];
+                    next[index] = { ...next[index], code: e.target.value };
+                    setStep1({ ...step1, coordinators: next });
                   }}
                 />
-                {step1.coordinatorCodes.length > 1 && (
+                <Input
+                  type="number"
+                  min={1}
+                  className="w-24"
+                  placeholder="Dari"
+                  value={coordinator.rackStart}
+                  onChange={(e) => {
+                    const next = [...step1.coordinators];
+                    next[index] = { ...next[index], rackStart: Number(e.target.value) };
+                    setStep1({ ...step1, coordinators: next });
+                  }}
+                />
+                <Input
+                  type="number"
+                  min={coordinator.rackStart}
+                  className="w-24"
+                  placeholder="Sampai"
+                  value={coordinator.rackEnd}
+                  onChange={(e) => {
+                    const next = [...step1.coordinators];
+                    next[index] = { ...next[index], rackEnd: Number(e.target.value) };
+                    setStep1({ ...step1, coordinators: next });
+                  }}
+                />
+                {step1.coordinators.length > 1 && (
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setStep1({ ...step1, coordinatorCodes: step1.coordinatorCodes.filter((_, i) => i !== index) })}
+                    onClick={() => setStep1({ ...step1, coordinators: step1.coordinators.filter((_, i) => i !== index) })}
                   >
                     Hapus
                   </Button>
@@ -86,7 +142,7 @@ export default function SessionAddForm({
             <Button
               type="button"
               variant="outline"
-              onClick={() => setStep1({ ...step1, coordinatorCodes: [...step1.coordinatorCodes, ""] })}
+              onClick={() => setStep1({ ...step1, coordinators: [...step1.coordinators, { code: "", rackStart: 1, rackEnd: 1 }] })}
             >
               + Tambah Koordinator
             </Button>
