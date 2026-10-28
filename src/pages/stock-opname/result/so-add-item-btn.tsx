@@ -71,7 +71,7 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
     event.preventDefault();
     const barcode = scannedBarcode.trim();
     const plu = product?.value.trim() ?? "";
-    if (!rack || !quantity || Number(quantity) <= 0 || (!barcode && !plu)) {
+    if (!rack || !quantity || Number(quantity) < 0 || (!barcode && !plu)) {
       const message = "Rak, jumlah valid, dan salah satu barcode / produk (PLU) wajib diisi.";
       setValidationError(message);
       showToast(message, "error");
@@ -105,7 +105,7 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
           <div className="space-y-2"><Label>Produk (PLU)</Label><Combobox items={products.map((item) => ({ value: item.plu, label: `${item.plu} - ${item.name}` }))} value={product} onValueChange={(value) => { setProduct(value as Option | null); setValidationError(undefined); }} onInputValueChange={(value) => setProductSearchInput(value)} itemToStringValue={(item: Option) => item.label}><ComboboxInput placeholder="Ketik PLU / nama / barcode…" /><ComboboxContent><ComboboxEmpty>Tidak ada data.</ComboboxEmpty><ComboboxList>{(item) => <ComboboxItem key={item.value} value={item}>{item.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox>
             <p className="text-muted-foreground text-xs">Isi salah satu: barcode hasil scan atau produk PLU. Jika keduanya diisi, barcode diprioritaskan.</p>
           </div>
-          <div className="space-y-2"><Label htmlFor="so-quantity">Jumlah</Label><Input id="so-quantity" type="number" min="1" value={quantity} onChange={(event) => { setQuantity(event.target.value); setValidationError(undefined); }} />{validationError ? <p className="text-sm text-destructive">{validationError}</p> : null}</div>
+          <div className="space-y-2"><Label htmlFor="so-quantity">Jumlah</Label><Input id="so-quantity" type="number" step="0.01" min="0" value={quantity} onChange={(event) => { setQuantity(event.target.value); setValidationError(undefined); }} />{validationError ? <p className="text-sm text-destructive">{validationError}</p> : null}</div>
           <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={submitting}>Batal</Button><Button type="submit" disabled={submitting}>{submitting ? "Menambahkan..." : "Tambah Item"}</Button></div>
         </form>
       </DialogContent>
