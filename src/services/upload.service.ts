@@ -3,6 +3,7 @@ import type { Upload } from "@/types/upload";
 
 type UploadResponse = {
   upload_id: number;
+  upload_number: number;
   rack_count: number;
   item_count: number;
   created_at: string;
@@ -11,6 +12,7 @@ type UploadResponse = {
 function mapUpload(item: UploadResponse): Upload {
   return {
     uploadId: item.upload_id,
+    uploadNumber: item.upload_number,
     rackCount: item.rack_count,
     itemCount: item.item_count,
     createdAt: item.created_at,
