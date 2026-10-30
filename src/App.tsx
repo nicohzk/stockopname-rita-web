@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import MainLayout from "./components/layout/main-layout";
+import ScrollToTop from "./components/layout/scroll-to-top";
 import StockOpnamePage from "./pages/stock-opname/stock-opname-page";
 import SessionPage from "./pages/stock-opname/session-page";
 import CoorPage from "./pages/stock-opname/coor-page";
@@ -14,6 +15,7 @@ function App() {
     <ToastProvider>
       <TooltipProvider>
       <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         <Route
           path="/stock-opname/sesi/:sessionId/print-qr"
