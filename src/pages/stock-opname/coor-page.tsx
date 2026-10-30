@@ -461,6 +461,7 @@ export default function CoorPage() {
                 id: coordinator.id,
                 code: coordinator.code,
                 status: coordinator.status,
+                sessionId: session,
                 sessionCode: coordinator.sessionCode ?? sessionData?.code,
                 sessionLocation: coordinator.sessionLocation ?? sessionData?.location,
               }

@@ -1,4 +1,3 @@
-import { useRef, useState, type Ref } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,7 @@ export type CoordinatorQRInfo = {
   id: number;
   code: string;
   status: string;
+  sessionId: number;
   sessionCode?: string;
   sessionLocation?: string;
 };
@@ -24,14 +24,12 @@ export type CoordinatorQRInfo = {
 type CoordinatorQRFigureProps = {
   coordinator: CoordinatorQRInfo;
   size?: number;
-  svgRef?: Ref<SVGSVGElement>;
   showMeta?: boolean;
 };
 
 export function CoordinatorQRFigure({
   coordinator,
   size = 256,
-  svgRef,
   showMeta = true,
 }: CoordinatorQRFigureProps) {
   const qrValue = formatCoordinatorQR(coordinator.id);
@@ -39,10 +37,9 @@ export function CoordinatorQRFigure({
     <div className="flex flex-col items-center gap-3">
       <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-black/10 dark:ring-white/10">
         <QRCodeSVG
-          ref={svgRef}
           value={qrValue}
           size={size}
-          level="M"
+          level="H"
           marginSize={2}
           bgColor="#FFFFFF"
           fgColor="#000000"
@@ -61,44 +58,10 @@ export function CoordinatorQRFigure({
   );
 }
 
-function printCoordinatorQR(coordinator: CoordinatorQRInfo, svg: SVGSVGElement) {
-  const svgHtml = new XMLSerializer().serializeToString(svg);
-  const win = window.open("", "_blank", "width=480,height=640");
+function openCoordinatorQRPrint(coordinator: CoordinatorQRInfo) {
+  const url = `/stock-opname/sesi/${coordinator.sessionId}/print-qr?coordinatorId=${coordinator.id}&auto=1`;
+  const win = window.open(url, "_blank");
   if (!win) throw new Error("Popup diblokir. Izinkan popup untuk mencetak.");
-  win.document.write(`<!doctype html>
-<html lang="id">
-<head>
-<meta charset="utf-8" />
-<title>QR ${coordinator.code}</title>
-<style>
-  * { box-sizing: border-box; }
-  body { margin: 0; display: flex; min-height: 100vh; align-items: center; justify-content: center; font-family: sans-serif; background: #fff; color: #000; }
-  .wrap { text-align: center; padding: 24px; }
-  svg { width: 320px; height: 320px; }
-  h1 { font-size: 22px; margin: 16px 0 4px; }
-  @media print { body { min-height: auto; } }
-</style>
-</head>
-<body>
-  <div class="wrap">
-    ${svgHtml}
-    <h1>${coordinator.code}</h1>
-  </div>
-</body>
-</html>`);
-  win.document.close();
-  win.focus();
-  // Tunggu SVG ter-render sebelum print.
-  win.onload = () => {
-    win.print();
-  };
-  window.setTimeout(() => {
-    try {
-      win.print();
-    } catch {
-      // Abaikan; user bisa print manual via Ctrl+P.
-    }
-  }, 500);
 }
 
 type CoordinatorQRModalProps = {
@@ -112,22 +75,17 @@ export default function CoordinatorQRModal({
   open,
   onClose,
 }: CoordinatorQRModalProps) {
-  const svgRef = useRef<SVGSVGElement>(null);
   const { showToast } = useToast();
-  const [printing, setPrinting] = useState(false);
 
   const handlePrint = () => {
-    if (!coordinator || !svgRef.current || printing) return;
-    setPrinting(true);
+    if (!coordinator) return;
     try {
-      printCoordinatorQR(coordinator, svgRef.current);
+      openCoordinatorQRPrint(coordinator);
     } catch (error) {
       showToast(
         error instanceof Error ? error.message : "Gagal mencetak QR.",
         "error",
       );
-    } finally {
-      setPrinting(false);
     }
   };
 
@@ -150,17 +108,15 @@ export default function CoordinatorQRModal({
             <CoordinatorQRFigure
               coordinator={coordinator}
               size={256}
-              svgRef={svgRef}
             />
             <div className="w-full">
               <Button
                 variant="outline"
                 className="w-full"
                 onClick={handlePrint}
-                disabled={printing}
               >
                 <Printer />
-                Print
+                Cetak Label
               </Button>
             </div>
           </div>

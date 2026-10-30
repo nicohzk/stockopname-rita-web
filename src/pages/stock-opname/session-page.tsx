@@ -4,6 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { LoadingSpinner } from "@/components/ui/loading";
+import { Printer } from "lucide-react";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import { getSession, updateSession, deleteSession } from "@/services/session.service";
 import { getProductCount } from "@/services/product.service";
@@ -233,6 +235,16 @@ export default function SessionPage() {
   const rackOptions = racks.filter(
     (rack) => !filterCoordinatorId || rack.coordinatorId === Number(filterCoordinatorId),
   );
+  const activeCoordinatorCount = coordinators.filter(
+    (coordinator) => coordinator.status === "IN_PROGRESS",
+  ).length;
+  const handlePrintAllQR = () => {
+    const win = window.open(
+      `/stock-opname/sesi/${id}/print-qr?all=1&auto=1`,
+      "_blank",
+    );
+    if (!win) showToast("Popup diblokir. Izinkan popup untuk mencetak.", "error");
+  };
 
   if (!Number.isFinite(id)) {
     return (
@@ -361,6 +373,21 @@ export default function SessionPage() {
         <CardHeader>
           <CardTitle>Data Koordinator</CardTitle>
           <CardDescription>Daftar koordinator yang bertugas dalam sesi ini</CardDescription>
+          <CardAction>
+            <Button
+              variant="outline"
+              onClick={handlePrintAllQR}
+              disabled={activeCoordinatorCount === 0}
+              title={
+                activeCoordinatorCount === 0
+                  ? "Tidak ada koordinator berstatus In Progress."
+                  : undefined
+              }
+            >
+              <Printer />
+              Cetak Semua QR
+            </Button>
+          </CardAction>
         </CardHeader>
         <CardContent>
           <CoordinatorTable
