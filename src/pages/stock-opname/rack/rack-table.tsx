@@ -56,7 +56,7 @@ export function RackTable<TData extends RowData>({
           className="w-full sm:max-w-sm"
         />
       </div>
-      <div className="rounded-md border">
+      <div className="overflow-hidden rounded-lg border">
         <Table className="table-fixed">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
