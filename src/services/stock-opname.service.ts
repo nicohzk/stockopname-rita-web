@@ -6,11 +6,12 @@ function mapResult(item: StockOpnameResponse): StockOpname {
   return { id: item.id, barcode: item.barcode, name: item.product_name, quantity: item.quantity, rackName: item.rak_name, coordinator: item.coor_code, updatedAt: item.updatedAt };
 }
 
-export async function getStockOpnames(params: { page?: number; limit?: number; search?: string; sessionId?: number; coordinatorId?: number } = {}) {
+export async function getStockOpnames(params: { page?: number; limit?: number; search?: string; sessionId?: number; coordinatorId?: number; rakId?: number } = {}) {
   const query = new URLSearchParams({ page: String(params.page ?? 1), limit: String(params.limit ?? 6) });
   if (params.search) query.set("search", params.search);
   if (params.sessionId !== undefined) query.set("sessionId", String(params.sessionId));
   if (params.coordinatorId !== undefined) query.set("coordinatorId", String(params.coordinatorId));
+  if (params.rakId !== undefined) query.set("rakId", String(params.rakId));
   const response = await api<ApiResponse<StockOpnameResponse[]> & { pagination: Pagination }>(`/stockopname/results?${query}`);
   return { data: (response.data ?? []).map(mapResult), pagination: response.pagination ?? { page: 1, limit: params.limit ?? 6, total_pages: 1, total_items: 0 } };
 }

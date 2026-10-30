@@ -1,1 +1,1 @@
-export type Rack = { id: number; name: string; uploadedAt: string };
+export type Rack = { id: number; name: string; coordinatorId: number; uploadedAt: string };

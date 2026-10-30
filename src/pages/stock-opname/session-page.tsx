@@ -15,7 +15,8 @@ import { AlertDialog } from "@/components/ui/alert-dialog";
 import { getSession, updateSession, deleteSession } from "@/services/session.service";
 import { getProductCount } from "@/services/product.service";
 import { getCoordinators } from "@/services/coordinator.service";
-import { getRackProgress } from "@/services/rack.service";
+import { getRackProgress, getRacks } from "@/services/rack.service";
+import type { Rack } from "@/types/rack";
 import {
   createStockOpname,
   deleteStockOpname,
@@ -61,6 +62,9 @@ export default function SessionPage() {
   const [progress, setProgress] = useState<
     Awaited<ReturnType<typeof getRackProgress>>
   >([]);
+  const [racks, setRacks] = useState<Rack[]>([]);
+  const [filterCoordinatorId, setFilterCoordinatorId] = useState("");
+  const [filterRackId, setFilterRackId] = useState("");
   const [resultPage, setResultPage] = useState(1);
   const [resultSearch, setResultSearch] = useState("");
   const [resultSearchInput, setResultSearchInput] = useState("");
@@ -85,6 +89,8 @@ export default function SessionPage() {
           getCoordinators(id),
           getStockOpnames({
             sessionId: id,
+            coordinatorId: filterCoordinatorId ? Number(filterCoordinatorId) : undefined,
+            rakId: filterRackId ? Number(filterRackId) : undefined,
             page: resultPage,
             search: resultSearch,
           }),
@@ -138,7 +144,12 @@ export default function SessionPage() {
 
   useEffect(() => {
     if (Number.isFinite(id)) void loadData();
-  }, [id, resultPage, resultSearch]);
+  }, [id, resultPage, resultSearch, filterCoordinatorId, filterRackId]);
+  useEffect(() => {
+    if (!Number.isFinite(id)) return;
+    // Filter options only; a failure must not block the result table.
+    getRacks({ sessionId: id }).then(setRacks).catch(() => undefined);
+  }, [id]);
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setResultSearch(resultSearchInput);
@@ -208,6 +219,20 @@ export default function SessionPage() {
       throw mutationError;
     }
   };
+
+  const handleCoordinatorFilter = (value: string) => {
+    setFilterCoordinatorId(value);
+    setFilterRackId("");
+    setResultPage(1);
+  };
+  const handleRackFilter = (value: string) => {
+    setFilterRackId(value);
+    setResultPage(1);
+  };
+  const coordinatorCodeById = new Map(coordinators.map((coordinator) => [coordinator.id, coordinator.code]));
+  const rackOptions = racks.filter(
+    (rack) => !filterCoordinatorId || rack.coordinatorId === Number(filterCoordinatorId),
+  );
 
   if (!Number.isFinite(id)) {
     return (
@@ -357,6 +382,39 @@ export default function SessionPage() {
               session.status !== "IN_PROGRESS",
             )}
             data={results}
+            filters={
+              <div className="flex flex-wrap gap-2">
+                <select
+                  aria-label="Filter koordinator"
+                  className="h-9 rounded-md border bg-transparent px-3 text-sm"
+                  value={filterCoordinatorId}
+                  onChange={(event) => handleCoordinatorFilter(event.target.value)}
+                >
+                  <option value="">Semua koordinator</option>
+                  {coordinators.map((coordinator) => (
+                    <option key={coordinator.id} value={coordinator.id}>
+                      {coordinator.code}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="Filter rak"
+                  className="h-9 rounded-md border bg-transparent px-3 text-sm"
+                  value={filterRackId}
+                  onChange={(event) => handleRackFilter(event.target.value)}
+                  disabled={rackOptions.length === 0}
+                >
+                  <option value="">Semua rak</option>
+                  {rackOptions.map((rack) => (
+                    <option key={rack.id} value={rack.id}>
+                      {filterCoordinatorId
+                        ? rack.name
+                        : `${rack.name} - ${coordinatorCodeById.get(rack.coordinatorId) ?? ""}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            }
             addButton={
               <StockOpnameAddItemButton
                 sessionId={id}
