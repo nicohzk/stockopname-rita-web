@@ -10,10 +10,9 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import {
-  ClipboardList,
-} from "lucide-react";
+import { ClipboardList } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import ThemeToggle from "./theme-toggle";
 
 const menuItems = [
   { to: "/stock-opname", label: "Stock Opname", icon: ClipboardList },
@@ -81,8 +80,11 @@ export default function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-slate-800 bg-slate-950 px-4 py-3">
-        <p className="text-[10px] text-slate-500">Rita Stock Opname v.1.0</p>
+      <SidebarFooter className="gap-1 border-t border-slate-800 bg-slate-950 px-3 py-3">
+        <ThemeToggle />
+        <p className="px-2 text-[10px] text-slate-500 group-data-[collapsible=icon]:hidden">
+          Rita Stock Opname v.1.0
+        </p>
       </SidebarFooter>
     </Sidebar>
   );

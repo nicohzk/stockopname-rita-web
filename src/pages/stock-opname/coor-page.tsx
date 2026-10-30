@@ -72,6 +72,7 @@ export default function CoorPage() {
   const [resultPage, setResultPage] = useState(1);
   const [resultSearch, setResultSearch] = useState("");
   const [resultSearchInput, setResultSearchInput] = useState("");
+  const [filterRackId, setFilterRackId] = useState("");
   const [resultTotalPages, setResultTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
@@ -94,6 +95,7 @@ export default function CoorPage() {
         getStockOpnames({
           sessionId: session,
           coordinatorId: id,
+          rakId: filterRackId ? Number(filterRackId) : undefined,
           page: resultPage,
           search: resultSearch,
         }),
@@ -128,7 +130,7 @@ export default function CoorPage() {
 
   useEffect(() => {
     if (Number.isFinite(id) && Number.isFinite(session)) void loadData();
-  }, [id, session, resultPage, resultSearch]);
+  }, [id, session, resultPage, resultSearch, filterRackId]);
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setResultSearch(resultSearchInput);
@@ -210,6 +212,10 @@ export default function CoorPage() {
     }
   };
 
+  const handleRackFilter = (value: string) => {
+    setFilterRackId(value);
+    setResultPage(1);
+  };
   const handleOpenUploadReport = async (uploadId: number) => {
     try {
       await openUploadReport(uploadId);
@@ -402,6 +408,22 @@ export default function CoorPage() {
               sessionData?.status !== "IN_PROGRESS",
             )}
             data={results}
+            filters={
+              <select
+                aria-label="Filter rak"
+                className="h-9 rounded-md border bg-transparent px-3 text-sm"
+                value={filterRackId}
+                onChange={(event) => handleRackFilter(event.target.value)}
+                disabled={racks.length === 0}
+              >
+                <option value="">Semua rak</option>
+                {racks.map((rack) => (
+                  <option key={rack.id} value={rack.id}>
+                    {rack.name}
+                  </option>
+                ))}
+              </select>
+            }
             addButton={
               <StockOpnameAddItemButton
                 sessionId={session}
@@ -439,6 +461,7 @@ export default function CoorPage() {
                 id: coordinator.id,
                 code: coordinator.code,
                 status: coordinator.status,
+                sessionId: session,
                 sessionCode: coordinator.sessionCode ?? sessionData?.code,
                 sessionLocation: coordinator.sessionLocation ?? sessionData?.location,
               }

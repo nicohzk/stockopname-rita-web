@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/ui/loading";
-import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -135,8 +134,7 @@ export default function ProductPage() {
               </BreadcrumbList>
             </Breadcrumb>
             <h1 className="text-2xl font-bold mt-2">Master Produk</h1>
-            <StatusBadge className="my-2" status={session.status} />
-            <p className="text-muted-foreground text-sm">
+            <p className="text-sm font-semibold mt-1">
               {session.code} · {session.location}
             </p>
           </div>

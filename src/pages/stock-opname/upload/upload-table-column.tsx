@@ -11,6 +11,10 @@ export const createColumns = (
   onOpenPdf: (uploadId: number) => Promise<void>,
 ) =>
   columnHelper.columns([
+    columnHelper.accessor("uploadNumber", {
+      header: "No.",
+      size: 60,
+    }),
     columnHelper.accessor("createdAt", {
       header: "Waktu Upload",
       size: 160,

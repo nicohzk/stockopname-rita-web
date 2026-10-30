@@ -22,7 +22,7 @@ export default function StockOpnameSummaryCards({ totalSessions, completedSessio
           <CardTitle>Selesai</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-2xl font-bold text-green-600">{completedSessions}</p>
+          <p className="text-2xl font-bold text-green-600 dark:text-green-400">{completedSessions}</p>
         </CardContent>
       </Card>
       <Card>
@@ -30,7 +30,7 @@ export default function StockOpnameSummaryCards({ totalSessions, completedSessio
           <CardTitle>Proses</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-2xl font-bold text-yellow-600">{inProgressSessions}</p>
+          <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{inProgressSessions}</p>
         </CardContent>
       </Card>
     </div>

@@ -28,6 +28,7 @@ interface DataTableProps<TData extends RowData> {
   searchValue?: string;
   loading?: boolean;
   addButton?: ReactNode;
+  filters?: ReactNode;
 }
 
 export function StockOpnameTable<TData extends RowData>({
@@ -40,6 +41,7 @@ export function StockOpnameTable<TData extends RowData>({
   searchValue = "",
   loading = false,
   addButton,
+  filters,
 }: DataTableProps<TData>) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
@@ -62,15 +64,18 @@ export function StockOpnameTable<TData extends RowData>({
   return (
     <div className="relative">
       <div className="flex flex-col gap-2 pb-2 sm:flex-row sm:items-center sm:justify-between">
-        <Input
-          placeholder="Cari barang..."
-          value={onSearch ? searchValue : (table.getColumn("name")?.getFilterValue() as string) ?? ""}
-          onChange={(event) => onSearch ? onSearch(event.target.value) : table.getColumn("name")?.setFilterValue(event.target.value)}
-          className="w-full sm:max-w-sm"
-        />
+        <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+          <Input
+            placeholder="Cari barang..."
+            value={onSearch ? searchValue : (table.getColumn("name")?.getFilterValue() as string) ?? ""}
+            onChange={(event) => onSearch ? onSearch(event.target.value) : table.getColumn("name")?.setFilterValue(event.target.value)}
+            className="w-full sm:max-w-sm"
+          />
+          {filters}
+        </div>
         {addButton}
       </div>
-      <div className="rounded-md border">
+      <div className="overflow-hidden rounded-lg border">
         <Table className="table-fixed">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
