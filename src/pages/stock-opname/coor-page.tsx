@@ -48,8 +48,9 @@ import type {
 } from "@/types/stock-opname";
 import type { Rack } from "@/types/rack";
 import type { Upload } from "@/types/upload";
+import { Printer } from "lucide-react";
 import CoordinatorPrintMenu from "./coordinator-print-menu";
-import { openUploadReport } from "@/services/report.service";
+import { openCoordinatorUploadSummary, openUploadReport } from "@/services/report.service";
 import { StatusBadge } from "@/components/ui/status-badge";
 import CoordinatorQRModal from "@/components/CoordinatorQRModal";
 
@@ -228,6 +229,16 @@ export default function CoorPage() {
       );
     }
   };
+  const handleOpenUploadSummary = async () => {
+    try {
+      await openCoordinatorUploadSummary(id);
+    } catch (mutationError) {
+      showToast(
+        mutationError instanceof Error ? mutationError.message : "Gagal membuat summary upload.",
+        "error",
+      );
+    }
+  };
   const handleDeleteRack = async (rakId: number) => {
     try {
       await deleteRack(rakId);
@@ -374,6 +385,17 @@ export default function CoorPage() {
         <CardHeader>
           <CardTitle>Riwayat Upload</CardTitle>
           <CardDescription>Setiap submit mobile dicatat sebagai satu upload</CardDescription>
+          <CardAction>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleOpenUploadSummary()}
+              disabled={uploads.length === 0}
+            >
+              <Printer />
+              Cetak Summary
+            </Button>
+          </CardAction>
         </CardHeader>
         <CardContent>
           <UploadTable

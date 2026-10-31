@@ -8,6 +8,10 @@ export async function openCoordinatorReport(id: number) {
   return openReport(`/stockopname/coordinators/${id}/pdf`);
 }
 
+export async function openCoordinatorUploadSummary(id: number) {
+  return openReport(`/stockopname/coordinators/${id}/uploads/pdf`);
+}
+
 export async function openUploadReport(id: number) {
   return openReport(`/stockopname/uploads/${id}/pdf`);
 }
