@@ -72,7 +72,7 @@ export function SessionTable<TData extends RowData>({
         />
         {addButton}
       </div>
-      <div className="overflow-hidden rounded-lg border">
+      <div className="relative overflow-hidden rounded-lg border">
         <Table className="table-fixed">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -119,8 +119,8 @@ export function SessionTable<TData extends RowData>({
             )}
           </TableBody>
         </Table>
+        {loading ? <LoadingOverlay message="Memuat sesi..." /> : null}
       </div>
-      {loading ? <LoadingOverlay message="Memuat sesi..." /> : null}
       <div className="flex flex-wrap items-center justify-end gap-2 pt-4">
         <div className="text-muted-foreground text-sm">
           Page {page ?? table.state.pagination.pageIndex + 1} of {totalPages ?? table.getPageCount()}
