@@ -4,6 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -35,6 +36,7 @@ import {
 } from "@/services/stock-opname.service";
 import StockOpnameAddItemButton from "./result/so-add-item-btn";
 import { RackTable } from "./rack/rack-table";
+import { RackSeatMap } from "./rack/rack-seat-map";
 import { createColumns as createRackColumns } from "./rack/rack-table-column";
 import { UploadTable } from "./upload/upload-table";
 import { createColumns as createUploadColumns } from "./upload/upload-table-column";
@@ -384,6 +386,9 @@ export default function CoorPage() {
         <CardHeader>
           <CardTitle>Daftar Rak</CardTitle>
           <CardDescription>Rak yang belum diupload masih bisa dihapus</CardDescription>
+          <CardAction>
+            <RackSeatMap racks={racks} />
+          </CardAction>
         </CardHeader>
         <CardContent>
           <RackTable
