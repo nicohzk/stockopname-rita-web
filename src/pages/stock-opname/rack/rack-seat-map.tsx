@@ -15,7 +15,9 @@ import type { Rack } from "@/types/rack";
 export function RackSeatMap({ racks }: { racks: Rack[] }) {
   const [open, setOpen] = useState(false);
   const uploaded = racks.filter((rack) => rack.uploadedAt).length;
-  const sorted = [...racks].sort((a, b) => a.name.localeCompare(b.name));
+  const sorted = [...racks].sort((a, b) =>
+    a.name.localeCompare(b.name, "id", { numeric: true }),
+  );
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
