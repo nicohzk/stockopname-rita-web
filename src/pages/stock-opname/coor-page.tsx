@@ -4,6 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -35,6 +36,7 @@ import {
 } from "@/services/stock-opname.service";
 import StockOpnameAddItemButton from "./result/so-add-item-btn";
 import { RackTable } from "./rack/rack-table";
+import { RackSeatMap } from "./rack/rack-seat-map";
 import { createColumns as createRackColumns } from "./rack/rack-table-column";
 import { UploadTable } from "./upload/upload-table";
 import { createColumns as createUploadColumns } from "./upload/upload-table-column";
@@ -46,8 +48,9 @@ import type {
 } from "@/types/stock-opname";
 import type { Rack } from "@/types/rack";
 import type { Upload } from "@/types/upload";
+import { Printer } from "lucide-react";
 import CoordinatorPrintMenu from "./coordinator-print-menu";
-import { openUploadReport } from "@/services/report.service";
+import { openCoordinatorUploadSummary, openUploadReport } from "@/services/report.service";
 import { StatusBadge } from "@/components/ui/status-badge";
 import CoordinatorQRModal from "@/components/CoordinatorQRModal";
 
@@ -226,6 +229,16 @@ export default function CoorPage() {
       );
     }
   };
+  const handleOpenUploadSummary = async () => {
+    try {
+      await openCoordinatorUploadSummary(id);
+    } catch (mutationError) {
+      showToast(
+        mutationError instanceof Error ? mutationError.message : "Gagal membuat summary upload.",
+        "error",
+      );
+    }
+  };
   const handleDeleteRack = async (rakId: number) => {
     try {
       await deleteRack(rakId);
@@ -372,6 +385,17 @@ export default function CoorPage() {
         <CardHeader>
           <CardTitle>Riwayat Upload</CardTitle>
           <CardDescription>Setiap submit mobile dicatat sebagai satu upload</CardDescription>
+          <CardAction>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleOpenUploadSummary()}
+              disabled={uploads.length === 0}
+            >
+              <Printer />
+              Cetak Summary
+            </Button>
+          </CardAction>
         </CardHeader>
         <CardContent>
           <UploadTable
@@ -384,6 +408,9 @@ export default function CoorPage() {
         <CardHeader>
           <CardTitle>Daftar Rak</CardTitle>
           <CardDescription>Rak yang belum diupload masih bisa dihapus</CardDescription>
+          <CardAction>
+            <RackSeatMap racks={racks} />
+          </CardAction>
         </CardHeader>
         <CardContent>
           <RackTable
@@ -411,7 +438,7 @@ export default function CoorPage() {
             filters={
               <select
                 aria-label="Filter rak"
-                className="h-9 rounded-md border bg-transparent px-3 text-sm"
+                className="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-background [&>option]:text-foreground"
                 value={filterRackId}
                 onChange={(event) => handleRackFilter(event.target.value)}
                 disabled={racks.length === 0}

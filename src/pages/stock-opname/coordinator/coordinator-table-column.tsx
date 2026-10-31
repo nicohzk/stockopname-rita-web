@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TruncatedText } from "@/components/ui/table";
+import { formatRackRange } from "@/lib/rack-range";
+import type { Rack } from "@/types/rack";
 
 const columnHelper = createColumnHelper<DataTableFeatures, Coordinator>();
 
@@ -18,16 +20,22 @@ function CoordinatorDetailButton({ sessionId, coordinatorId }: { sessionId: stri
   );
 }
 
-export const createColumns = (sessionId: string) => {
+export const createColumns = (sessionId: string, racks: Rack[]) => {
   return columnHelper.columns([
   columnHelper.accessor("code", {
     header: "Kode Koordinator",
     size: 150,
     cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
-  columnHelper.accessor("rackAssigned", {
+  columnHelper.display({
+    id: "rackRange",
     header: "Rak Ditugaskan",
-    size: 100,
+    size: 180,
+    cell: ({ row }) => (
+      <TruncatedText>
+        {formatRackRange(racks.filter((rack) => rack.coordinatorId === row.original.id))}
+      </TruncatedText>
+    ),
   }),
   columnHelper.accessor("rackFinished", {
     header: "Rak Selesai",

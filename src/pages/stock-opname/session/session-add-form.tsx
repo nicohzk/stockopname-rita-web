@@ -107,7 +107,7 @@ export default function SessionAddForm({
                 <Input
                   type="number"
                   min={1}
-                  className="w-24"
+                  className="w-32 shrink-0"
                   placeholder="Dari"
                   value={coordinator.rackStart}
                   onChange={(e) => {
@@ -119,7 +119,7 @@ export default function SessionAddForm({
                 <Input
                   type="number"
                   min={coordinator.rackStart}
-                  className="w-24"
+                  className="w-32 shrink-0"
                   placeholder="Sampai"
                   value={coordinator.rackEnd}
                   onChange={(e) => {

@@ -391,7 +391,7 @@ export default function SessionPage() {
         </CardHeader>
         <CardContent>
           <CoordinatorTable
-            columns={createCoordinatorColumns(sessionId ?? "")}
+            columns={createCoordinatorColumns(sessionId ?? "", racks)}
             data={coordinators}
           />
         </CardContent>
@@ -413,7 +413,7 @@ export default function SessionPage() {
               <div className="flex flex-wrap gap-2">
                 <select
                   aria-label="Filter koordinator"
-                  className="h-9 rounded-md border bg-transparent px-3 text-sm"
+                  className="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-background [&>option]:text-foreground"
                   value={filterCoordinatorId}
                   onChange={(event) => handleCoordinatorFilter(event.target.value)}
                 >
@@ -426,7 +426,7 @@ export default function SessionPage() {
                 </select>
                 <select
                   aria-label="Filter rak"
-                  className="h-9 rounded-md border bg-transparent px-3 text-sm"
+                  className="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-background [&>option]:text-foreground"
                   value={filterRackId}
                   onChange={(event) => handleRackFilter(event.target.value)}
                   disabled={rackOptions.length === 0}

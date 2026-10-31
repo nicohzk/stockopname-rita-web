@@ -75,7 +75,7 @@ export function StockOpnameTable<TData extends RowData>({
         </div>
         {addButton}
       </div>
-      <div className="overflow-hidden rounded-lg border">
+      <div className="relative overflow-hidden rounded-lg border">
         <Table className="table-fixed">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -121,8 +121,8 @@ export function StockOpnameTable<TData extends RowData>({
             )}
           </TableBody>
         </Table>
+        {loading ? <LoadingOverlay message="Memuat data..." /> : null}
       </div>
-      {loading ? <LoadingOverlay message="Memuat data..." /> : null}
       <div className="flex flex-wrap items-center justify-end gap-2 pt-4">
         <div className="text-muted-foreground text-sm">
           Page {page ?? table.state.pagination.pageIndex + 1} of {totalPages ?? table.getPageCount()}
