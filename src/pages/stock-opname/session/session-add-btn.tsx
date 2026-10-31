@@ -20,7 +20,7 @@ export default function SessionAddBtn({ onSubmit }: { onSubmit: (data: SessionCr
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button>Tambah Sesi</Button>} />
 
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Tambah Sesi</DialogTitle>
           <Separator></Separator>

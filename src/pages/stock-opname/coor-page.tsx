@@ -411,7 +411,7 @@ export default function CoorPage() {
             filters={
               <select
                 aria-label="Filter rak"
-                className="h-9 rounded-md border bg-transparent px-3 text-sm"
+                className="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-background [&>option]:text-foreground"
                 value={filterRackId}
                 onChange={(event) => handleRackFilter(event.target.value)}
                 disabled={racks.length === 0}
