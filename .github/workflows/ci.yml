@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  workflow_call:
+  push:
+    branches: [dev, master]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Lint (advisory until existing errors are fixed)
+        run: npm run lint
+        continue-on-error: true

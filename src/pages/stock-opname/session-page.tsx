@@ -23,9 +23,12 @@ import {
   createStockOpname,
   deleteStockOpname,
   getStockOpnames,
+  moveStockOpname,
   updateStockOpname,
 } from "@/services/stock-opname.service";
 import StockOpnameAddItemButton from "./result/so-add-item-btn";
+import StockOpnameMoveDialog from "./result/so-move-dialog";
+import AuditTimeline from "./audit/audit-timeline";
 import { CoordinatorTable } from "./coordinator/coordinator-table";
 import { createColumns as createCoordinatorColumns } from "./coordinator/coordinator-table-column";
 import { StockOpnameTable } from "./result/so-table";
@@ -34,6 +37,7 @@ import ProductMasterCard from "./session/product/product-master-card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type {
+  StockOpname,
   StockOpnameCreateRequest,
   StockOpnameUpdateRequest,
 } from "@/types/stock-opname";
@@ -80,6 +84,13 @@ export default function SessionPage() {
   const [deleteCode, setDeleteCode] = useState("");
   const [deleteError, setDeleteError] = useState<string>();
   const [deleting, setDeleting] = useState(false);
+  const [moveState, setMoveState] = useState<{
+    sourceRackId: number;
+    sourceRackName: string;
+    resultIds?: number[];
+    itemCount?: number;
+  }>();
+  const [auditRefresh, setAuditRefresh] = useState(0);
 
   const loadData = async () => {
     try {
@@ -181,6 +192,7 @@ export default function SessionPage() {
     try {
       await updateStockOpname(resultId, data);
       await loadData();
+      setAuditRefresh((value) => value + 1);
       showToast("Data stock opname berhasil diperbarui.");
     } catch (mutationError) {
       showToast(
@@ -196,6 +208,7 @@ export default function SessionPage() {
     try {
       await deleteStockOpname(resultId);
       await loadData();
+      setAuditRefresh((value) => value + 1);
       showToast("Data stock opname berhasil dihapus.");
     } catch (mutationError) {
       showToast(
@@ -210,6 +223,7 @@ export default function SessionPage() {
     try {
       await createStockOpname(data);
       await loadData();
+      setAuditRefresh((value) => value + 1);
       showToast("Item berhasil ditambahkan.");
     } catch (mutationError) {
       showToast(
@@ -222,6 +236,30 @@ export default function SessionPage() {
     }
   };
 
+  const handleMoveRequest = (item: { rackId: number; rackName: string; id: number }) => {
+    setMoveState({
+      sourceRackId: item.rackId,
+      sourceRackName: item.rackName,
+      resultIds: [item.id],
+      itemCount: 1,
+    });
+  };
+
+  const handleMoveSubmit = async (targetRakId: number, note: string) => {
+    if (!moveState) return;
+    const result = await moveStockOpname({
+      sourceRakId: moveState.sourceRackId,
+      targetRakId,
+      resultIds: moveState.resultIds,
+      note,
+    });
+    await loadData();
+    setAuditRefresh((value) => value + 1);
+    showToast(
+      `${result.data.moved_count} item dipindah${result.data.merged_count ? `, ${result.data.merged_count} digabung` : ""}.`,
+    );
+  };
+
   const handleCoordinatorFilter = (value: string) => {
     setFilterCoordinatorId(value);
     setFilterRackId("");
@@ -232,6 +270,11 @@ export default function SessionPage() {
     setResultPage(1);
   };
   const coordinatorCodeById = new Map(coordinators.map((coordinator) => [coordinator.id, coordinator.code]));
+  const coordinatorStatusById = new Map(coordinators.map((coordinator) => [coordinator.id, coordinator.status]));
+  const isResultReadOnly = (item: StockOpname) => {
+    const status = coordinatorStatusById.get(item.coordinatorId);
+    return session?.status !== "IN_PROGRESS" || status === "COMPLETED" || status === "CANCELLED";
+  };
   const rackOptions = racks.filter(
     (rack) => !filterCoordinatorId || rack.coordinatorId === Number(filterCoordinatorId),
   );
@@ -399,14 +442,15 @@ export default function SessionPage() {
       <Card className="my-5">
         <CardHeader>
           <CardTitle>Data Barang Stock Opname</CardTitle>
-          <CardDescription>Daftar barang yang sudah dihitung dalam sesi ini</CardDescription>
+          <CardDescription>Data terkini hasil koreksi admin</CardDescription>
         </CardHeader>
         <CardContent>
           <StockOpnameTable
             columns={createResultColumns(
               handleResultUpdate,
               handleResultDelete,
-              session.status !== "IN_PROGRESS",
+              handleMoveRequest,
+              isResultReadOnly,
             )}
             data={results}
             filters={
@@ -459,6 +503,19 @@ export default function SessionPage() {
           />
         </CardContent>
       </Card>
+      <AuditTimeline key={`session-${id}`} sessionId={id} refreshKey={auditRefresh} />
+      {moveState ? (
+        <StockOpnameMoveDialog
+          open
+          onOpenChange={(open) => { if (!open) setMoveState(undefined); }}
+          sourceRack={racks.find((rack) => rack.id === moveState.sourceRackId)}
+          racks={racks}
+          coordinators={coordinators}
+          resultIds={moveState.resultIds}
+          itemCount={moveState.itemCount}
+          onSubmit={handleMoveSubmit}
+        />
+      ) : null}
       <AlertDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}

@@ -1,3 +1,5 @@
+import { getAdminActor } from "@/lib/admin-actor";
+
 const API_URL = import.meta.env.VITE_API_URL as string | undefined;
 if (!API_URL) {
   throw new Error("VITE_API_URL belum diisi. Salin .env.example menjadi .env lalu isi URL API.");
@@ -29,6 +31,7 @@ export async function api<T>(
       ...options,
       headers: {
         "Content-Type": "application/json",
+        "X-Actor": getAdminActor(),
         ...options?.headers,
       },
     },
@@ -71,7 +74,7 @@ export async function apiBlob(endpoint: string): Promise<Blob> {
 export async function apiForm<T>(endpoint: string, form: FormData, options?: RequestInit): Promise<T> {
   const response = await timedFetch(
     `${API_BASE_URL}${endpoint}`,
-    { ...options, method: options?.method ?? "POST", body: form },
+    { ...options, method: options?.method ?? "POST", body: form, headers: { "X-Actor": getAdminActor(), ...options?.headers } },
     120_000,
   );
 

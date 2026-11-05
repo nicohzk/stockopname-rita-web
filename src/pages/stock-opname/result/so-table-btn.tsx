@@ -15,7 +15,7 @@ import {
 
 import type { StockOpname } from "@/types/stock-opname";
 
-export default function StockOpnameTableButton({ item, onUpdate, onDelete }: { item: StockOpname; onUpdate: (id: number, quantity: number) => Promise<void>; onDelete: (id: number) => Promise<void> }) {
+export default function StockOpnameTableButton({ item, onUpdate, onDelete, onMove }: { item: StockOpname; onUpdate: (id: number, quantity: number) => Promise<void>; onDelete: (id: number) => Promise<void>; onMove?: (item: StockOpname) => void }) {
   const [open, setOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -61,6 +61,7 @@ export default function StockOpnameTableButton({ item, onUpdate, onDelete }: { i
       />
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => { setValidationError(undefined); setOpen(true); }}>Edit</DropdownMenuItem>
+        {onMove ? <DropdownMenuItem onClick={() => onMove(item)}>Pindahkan</DropdownMenuItem> : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={() => setConfirmOpen(true)}>Delete</DropdownMenuItem>
       </DropdownMenuContent>
