@@ -11,6 +11,10 @@ RUN npm ci
 
 COPY . .
 
+# Vite menanam nilai env ke bundle saat build, bukan saat runtime.
+ARG VITE_API_URL=https://api.albertt.my.id/
+ENV VITE_API_URL=$VITE_API_URL
+
 RUN npm run build
 
 
