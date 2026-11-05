@@ -8,10 +8,15 @@ import { TruncatedText } from "@/components/ui/table";
 
 const columnHelper = createColumnHelper<DataTableFeatures, StockOpname>();
 
-export const createColumns = (onUpdate: (id: number, data: StockOpnameUpdateRequest) => Promise<void>, onDelete: (id: number) => Promise<void>, readOnly = false) => columnHelper.columns([
+export const createColumns = (onUpdate: (id: number, data: StockOpnameUpdateRequest) => Promise<void>, onDelete: (id: number) => Promise<void>, onMove?: (item: StockOpname) => void, readOnly: boolean | ((item: StockOpname) => boolean) = false) => columnHelper.columns([
   columnHelper.accessor("barcode", {
     header: "Barcode",
     size: 90,
+    cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
+  }),
+  columnHelper.accessor("plu", {
+    header: "PLU",
+    size: 70,
     cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
   columnHelper.accessor("name", {
@@ -41,10 +46,11 @@ export const createColumns = (onUpdate: (id: number, data: StockOpnameUpdateRequ
     header: "Aksi",
     size: 60,
     cell: ({ row }) => {
-      if (readOnly) return null;
+      const isReadOnly = typeof readOnly === "function" ? readOnly(row.original) : readOnly;
+      if (isReadOnly) return null;
       return (
         <div className="flex">
-          <StockOpnameTableButton item={row.original} onUpdate={(id, quantity) => onUpdate(id, { quantity })} onDelete={onDelete} />
+          <StockOpnameTableButton item={row.original} onUpdate={(id, quantity) => onUpdate(id, { quantity })} onDelete={onDelete} onMove={onMove} />
         </div>
       );
     },

@@ -8,6 +8,7 @@ const columnHelper = createColumnHelper<DataTableFeatures, Rack>();
 
 export const createColumns = (
   onDelete: (rakId: number) => Promise<void>,
+  onMove?: (rack: Rack) => void,
   readOnly = false,
 ) =>
   columnHelper.columns([
@@ -25,10 +26,10 @@ export const createColumns = (
     columnHelper.display({
       id: "actions",
       header: "Aksi",
-      size: 100,
+      size: 180,
       cell: ({ row }) => {
         if (readOnly) return null;
-        return <RackTableButton item={row.original} onDelete={onDelete} />;
+        return <RackTableButton item={row.original} onDelete={onDelete} onMove={onMove} />;
       },
     }),
   ]);

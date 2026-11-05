@@ -24,6 +24,7 @@ import {
 import { getSession } from "@/services/session.service";
 import {
   getCoordinator,
+  getCoordinators,
   updateCoordinator,
 } from "@/services/coordinator.service";
 import { deleteRack, getRackProgress, getRacks } from "@/services/rack.service";
@@ -32,9 +33,12 @@ import {
   createStockOpname,
   deleteStockOpname,
   getStockOpnames,
+  moveStockOpname,
   updateStockOpname,
 } from "@/services/stock-opname.service";
 import StockOpnameAddItemButton from "./result/so-add-item-btn";
+import StockOpnameMoveDialog from "./result/so-move-dialog";
+import AuditTimeline from "./audit/audit-timeline";
 import { RackTable } from "./rack/rack-table";
 import { RackSeatMap } from "./rack/rack-seat-map";
 import { createColumns as createRackColumns } from "./rack/rack-table-column";
@@ -48,6 +52,7 @@ import type {
 } from "@/types/stock-opname";
 import type { Rack } from "@/types/rack";
 import type { Upload } from "@/types/upload";
+import type { Coordinator } from "@/types/coordinator";
 import { Printer } from "lucide-react";
 import CoordinatorPrintMenu from "./coordinator-print-menu";
 import { openCoordinatorUploadSummary, openUploadReport } from "@/services/report.service";
@@ -65,7 +70,16 @@ export default function CoorPage() {
   const [coordinator, setCoordinator] =
     useState<Awaited<ReturnType<typeof getCoordinator>>>();
   const [racks, setRacks] = useState<Rack[]>([]);
+  const [allRacks, setAllRacks] = useState<Rack[]>([]);
+  const [coordinators, setCoordinators] = useState<Coordinator[]>([]);
   const [uploads, setUploads] = useState<Upload[]>([]);
+  const [moveState, setMoveState] = useState<{
+    sourceRackId: number;
+    sourceRackName: string;
+    resultIds?: number[];
+    itemCount?: number;
+  }>();
+  const [auditRefresh, setAuditRefresh] = useState(0);
   const [results, setResults] = useState<
     Awaited<ReturnType<typeof getStockOpnames>>["data"]
   >([]);
@@ -104,12 +118,17 @@ export default function CoorPage() {
         }),
         getRackProgress({ sessionId: session, coordinatorId: id }),
       ]);
-      const [racksResult, uploadsResult] = await Promise.allSettled([
+      const [racksResult, allRacksResult, coordinatorsResult, uploadsResult] = await Promise.allSettled([
         getRacks({ sessionId: session, coordinatorId: id }),
+        getRacks({ sessionId: session }),
+        getCoordinators(session),
         getUploads(id),
       ]);
       setSessionData(loadedSession);
       setCoordinator(loadedCoordinator);
+      const allRacksValue = allRacksResult.status === "fulfilled" ? allRacksResult.value : [];
+      setAllRacks(allRacksValue);
+      setCoordinators(coordinatorsResult.status === "fulfilled" ? coordinatorsResult.value : []);
       const allRacks = racksResult.status === "fulfilled" ? racksResult.value : [];
       setRacks(allRacks);
       setUploads(uploadsResult.status === "fulfilled" ? uploadsResult.value : []);
@@ -174,6 +193,7 @@ export default function CoorPage() {
     try {
       await updateStockOpname(resultId, data);
       await loadData();
+      setAuditRefresh((value) => value + 1);
       showToast("Data stock opname berhasil diperbarui.");
     } catch (mutationError) {
       showToast(
@@ -189,6 +209,7 @@ export default function CoorPage() {
     try {
       await deleteStockOpname(resultId);
       await loadData();
+      setAuditRefresh((value) => value + 1);
       showToast("Data stock opname berhasil dihapus.");
     } catch (mutationError) {
       showToast(
@@ -203,6 +224,7 @@ export default function CoorPage() {
     try {
       await createStockOpname(data);
       await loadData();
+      setAuditRefresh((value) => value + 1);
       showToast("Item berhasil ditambahkan.");
     } catch (mutationError) {
       showToast(
@@ -213,6 +235,34 @@ export default function CoorPage() {
       );
       throw mutationError;
     }
+  };
+
+  const handleMoveRequest = (item: { rackId: number; rackName: string; id: number }) => {
+    setMoveState({
+      sourceRackId: item.rackId,
+      sourceRackName: item.rackName,
+      resultIds: [item.id],
+      itemCount: 1,
+    });
+  };
+
+  const handleRackMoveRequest = (rack: Rack) => {
+    setMoveState({ sourceRackId: rack.id, sourceRackName: rack.name });
+  };
+
+  const handleMoveSubmit = async (targetRakId: number, note: string) => {
+    if (!moveState) return;
+    const result = await moveStockOpname({
+      sourceRakId: moveState.sourceRackId,
+      targetRakId,
+      resultIds: moveState.resultIds,
+      note,
+    });
+    await loadData();
+    setAuditRefresh((value) => value + 1);
+    showToast(
+      `${result.data.moved_count} item dipindah${result.data.merged_count ? `, ${result.data.merged_count} digabung` : ""}.`,
+    );
   };
 
   const handleRackFilter = (value: string) => {
@@ -281,6 +331,10 @@ export default function CoorPage() {
   const canComplete = coordinator.status === "IN_REVIEW";
   const canCancel =
     coordinator.status === "IN_REVIEW" || coordinator.status === "IN_PROGRESS";
+  const coordinatorReadOnly =
+    sessionData?.status !== "IN_PROGRESS" ||
+    coordinator.status === "COMPLETED" ||
+    coordinator.status === "CANCELLED";
 
   return (
     <div className="min-w-0 p-0 sm:p-2">
@@ -383,8 +437,8 @@ export default function CoorPage() {
       </div>
       <Card className="my-5">
         <CardHeader>
-          <CardTitle>Riwayat Upload</CardTitle>
-          <CardDescription>Setiap submit mobile dicatat sebagai satu upload</CardDescription>
+          <CardTitle>Riwayat Upload (Histori)</CardTitle>
+          <CardDescription>Histori submit asli; koreksi admin tidak mengubah data ini</CardDescription>
           <CardAction>
             <Button
               variant="outline"
@@ -416,7 +470,8 @@ export default function CoorPage() {
           <RackTable
             columns={createRackColumns(
               handleDeleteRack,
-              sessionData?.status !== "IN_PROGRESS",
+              handleRackMoveRequest,
+              coordinatorReadOnly,
             )}
             data={racks}
           />
@@ -425,14 +480,15 @@ export default function CoorPage() {
       <Card className="my-5">
         <CardHeader>
           <CardTitle>Data Barang Stock Opname</CardTitle>
-          <CardDescription>Daftar barang yang sudah dihitung dalam koordinator ini</CardDescription>
+          <CardDescription>Data terkini hasil koreksi admin</CardDescription>
         </CardHeader>
         <CardContent>
           <StockOpnameTable
             columns={createResultColumns(
               handleResultUpdate,
               handleResultDelete,
-              sessionData?.status !== "IN_PROGRESS",
+              handleMoveRequest,
+              coordinatorReadOnly,
             )}
             data={results}
             filters={
@@ -456,7 +512,7 @@ export default function CoorPage() {
                 sessionId={session}
                 coordinators={coordinator ? [coordinator] : []}
                 onSubmit={handleResultCreate}
-                disabled={sessionData?.status !== "IN_PROGRESS" || coordinator.status === "COMPLETED" || coordinator.status === "CANCELLED"}
+                disabled={coordinatorReadOnly}
               />
             }
             onSearch={setResultSearchInput}
@@ -468,6 +524,19 @@ export default function CoorPage() {
           />
         </CardContent>
       </Card>
+      <AuditTimeline key={`coordinator-${id}`} coordinatorId={id} refreshKey={auditRefresh} />
+      {moveState ? (
+        <StockOpnameMoveDialog
+          open
+          onOpenChange={(open) => { if (!open) setMoveState(undefined); }}
+          sourceRack={allRacks.find((rack) => rack.id === moveState.sourceRackId) ?? racks.find((rack) => rack.id === moveState.sourceRackId)}
+          racks={allRacks.length > 0 ? allRacks : racks}
+          coordinators={coordinators.length > 0 ? coordinators : [coordinator]}
+          resultIds={moveState.resultIds}
+          itemCount={moveState.itemCount}
+          onSubmit={handleMoveSubmit}
+        />
+      ) : null}
       <AlertDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
