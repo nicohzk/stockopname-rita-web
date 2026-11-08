@@ -18,9 +18,19 @@ export const createColumns = (
       cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
     }),
     columnHelper.display({
-      id: "status",
-      header: "Status",
-      size: 120,
+      id: "contents",
+      header: "Isi Rak",
+      size: 110,
+      cell: ({ row }) => (
+        <span className={row.original.isEmpty ? "text-muted-foreground" : ""}>
+          {row.original.isEmpty ? "Kosong" : `${row.original.itemCount} item`}
+        </span>
+      ),
+    }),
+    columnHelper.display({
+      id: "upload",
+      header: "Upload",
+      size: 110,
       cell: ({ row }) => (row.original.uploadedAt ? "Terupload" : "Belum"),
     }),
     columnHelper.display({
