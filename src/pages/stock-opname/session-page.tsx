@@ -34,6 +34,7 @@ import { createColumns as createCoordinatorColumns } from "./coordinator/coordin
 import { StockOpnameTable } from "./result/so-table";
 import { createColumns as createResultColumns } from "./result/so-table-column";
 import ProductMasterCard from "./session/product/product-master-card";
+import CoordinatorAddButton from "./session/coordinator-add-btn";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type {
@@ -133,6 +134,15 @@ export default function SessionPage() {
       setProductCount(await getProductCount(id));
     } catch {
       // Count refresh is best-effort; the next loadData retries.
+    }
+  };
+
+  const handleCoordinatorCreated = async () => {
+    await loadData();
+    try {
+      setRacks(await getRacks({ sessionId: id }));
+    } catch {
+      // Rack filters refresh is best-effort; the next page load retries.
     }
   };
 
@@ -417,19 +427,26 @@ export default function SessionPage() {
           <CardTitle>Data Koordinator</CardTitle>
           <CardDescription>Daftar koordinator yang bertugas dalam sesi ini</CardDescription>
           <CardAction>
-            <Button
-              variant="outline"
-              onClick={handlePrintAllQR}
-              disabled={activeCoordinatorCount === 0}
-              title={
-                activeCoordinatorCount === 0
-                  ? "Tidak ada koordinator berstatus In Progress."
-                  : undefined
-              }
-            >
-              <Printer />
-              Cetak Semua QR
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <CoordinatorAddButton
+                sessionId={id}
+                disabled={session.status !== "IN_PROGRESS"}
+                onCreated={handleCoordinatorCreated}
+              />
+              <Button
+                variant="outline"
+                onClick={handlePrintAllQR}
+                disabled={activeCoordinatorCount === 0}
+                title={
+                  activeCoordinatorCount === 0
+                    ? "Tidak ada koordinator berstatus In Progress."
+                    : undefined
+                }
+              >
+                <Printer />
+                Cetak Semua QR
+              </Button>
+            </div>
           </CardAction>
         </CardHeader>
         <CardContent>
