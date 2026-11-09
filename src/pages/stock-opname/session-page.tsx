@@ -276,6 +276,7 @@ export default function SessionPage() {
     getRacks({ sessionId: id }).then(setRacks).catch(() => undefined);
   }, [id]);
   useEffect(() => {
+    if (resultSearchInput === resultSearch) return;
     const timer = window.setTimeout(() => {
       setLoading(true);
       setError(undefined);
@@ -286,7 +287,7 @@ export default function SessionPage() {
       setSelectionMode("manual");
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [resultSearchInput]);
+  }, [resultSearchInput, resultSearch]);
 
   const changeStatus = async (status: "COMPLETED" | "CANCELLED") => {
     try {

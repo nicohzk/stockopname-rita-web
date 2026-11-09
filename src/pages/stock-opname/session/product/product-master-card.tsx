@@ -52,6 +52,7 @@ export default function ProductMasterCard({
   };
 
   useEffect(() => {
+    if (searchInput === search) return;
     const timer = window.setTimeout(() => {
       setLoading(true);
       setError(undefined);
@@ -59,7 +60,7 @@ export default function ProductMasterCard({
       setPage(1);
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, search]);
 
   useEffect(() => {
     let cancelled = false;

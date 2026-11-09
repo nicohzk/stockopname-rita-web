@@ -78,6 +78,7 @@ export default function StockOpnamePage() {
     setPage(nextPage);
   };
   useEffect(() => {
+    if (searchInput === search) return;
     const timer = window.setTimeout(() => {
       setLoading(true);
       setError(undefined);
@@ -85,7 +86,7 @@ export default function StockOpnamePage() {
       setPage(1);
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, search]);
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
