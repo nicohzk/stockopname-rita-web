@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
+import type { RowSelectionState, Updater } from "@tanstack/react-table";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,8 +35,17 @@ import {
   deleteStockOpname,
   getStockOpnames,
   moveStockOpname,
+  setSellFactor,
   updateStockOpname,
 } from "@/services/stock-opname.service";
+import type {
+  ResultSelectionItem,
+  SellFactor,
+  SellFactorScope,
+  SelectionMode,
+} from "@/types/stock-opname";
+import ResultSelectionBar from "./result/result-selection-bar";
+import SellFactorDialog from "./result/sell-factor-dialog";
 import StockOpnameAddItemButton from "./result/so-add-item-btn";
 import StockOpnameMoveDialog from "./result/so-move-dialog";
 import AuditTimeline from "./audit/audit-timeline";
@@ -91,11 +101,24 @@ export default function CoorPage() {
   const [resultSearchInput, setResultSearchInput] = useState("");
   const [filterRackId, setFilterRackId] = useState("");
   const [resultTotalPages, setResultTotalPages] = useState(1);
+  const [resultTotalItems, setResultTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<"COMPLETED" | "CANCELLED">("COMPLETED");
   const [qrOpen, setQrOpen] = useState(false);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [selectedItems, setSelectedItems] = useState<Map<number, ResultSelectionItem>>(new Map());
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>("manual");
+  const [factorTarget, setFactorTarget] = useState<{
+    scope: SellFactorScope;
+    scopeId?: number;
+    label: string;
+    itemCount: number;
+    currentFactor?: SellFactor;
+    mixed?: boolean;
+    resultIds?: number[];
+  }>();
 
   const loadData = async () => {
     try {
@@ -138,6 +161,7 @@ export default function CoorPage() {
       setResults(loadedResults.data);
       setResultPage(loadedResults.pagination.page);
       setResultTotalPages(loadedResults.pagination.total_pages || 1);
+      setResultTotalItems(loadedResults.pagination.total_items ?? 0);
       setProgress(loadedProgress);
     } catch (loadError) {
       setError(
@@ -150,6 +174,41 @@ export default function CoorPage() {
     }
   };
 
+  const clearSelection = () => {
+    setRowSelection({});
+    setSelectedItems(new Map());
+    setSelectionMode("manual");
+  };
+
+  const handleRowSelectionChange = (updater: Updater<RowSelectionState>) => {
+    const next = typeof updater === "function" ? updater(rowSelection) : updater;
+    if (Object.keys(next).length > 500) {
+      showToast("Maksimal 500 item untuk selection manual.", "error");
+      return;
+    }
+    setRowSelection(next);
+    setSelectedItems((previous) => {
+      const updated = new Map(previous);
+      for (const id of updated.keys()) {
+        if (!next[String(id)]) updated.delete(id);
+      }
+      for (const item of results) {
+        if (next[String(item.id)]) {
+          updated.set(item.id, {
+            id: item.id,
+            rackId: item.rackId,
+            coordinatorId: item.coordinatorId,
+            sellFactor: item.sellFactor,
+          });
+        } else {
+          updated.delete(item.id);
+        }
+      }
+      return updated;
+    });
+    if (Object.keys(next).length > 0) setSelectionMode("manual");
+  };
+
   useEffect(() => {
     if (Number.isFinite(id) && Number.isFinite(session)) void loadData();
   }, [id, session, resultPage, resultSearch, filterRackId]);
@@ -157,6 +216,9 @@ export default function CoorPage() {
     const timer = window.setTimeout(() => {
       setResultSearch(resultSearchInput);
       setResultPage(1);
+      setRowSelection({});
+      setSelectedItems(new Map());
+      setSelectionMode("manual");
     }, 250);
     return () => window.clearTimeout(timer);
   }, [resultSearchInput]);
@@ -193,6 +255,7 @@ export default function CoorPage() {
     try {
       await updateStockOpname(resultId, data);
       await loadData();
+      clearSelection();
       setAuditRefresh((value) => value + 1);
       showToast("Data stock opname berhasil diperbarui.");
     } catch (mutationError) {
@@ -209,6 +272,7 @@ export default function CoorPage() {
     try {
       await deleteStockOpname(resultId);
       await loadData();
+      clearSelection();
       setAuditRefresh((value) => value + 1);
       showToast("Data stock opname berhasil dihapus.");
     } catch (mutationError) {
@@ -224,6 +288,7 @@ export default function CoorPage() {
     try {
       await createStockOpname(data);
       await loadData();
+      clearSelection();
       setAuditRefresh((value) => value + 1);
       showToast("Item berhasil ditambahkan.");
     } catch (mutationError) {
@@ -259,6 +324,7 @@ export default function CoorPage() {
       note,
     });
     await loadData();
+    clearSelection();
     setAuditRefresh((value) => value + 1);
     showToast(
       `${result.data.moved_count} item dipindah${result.data.merged_count ? `, ${result.data.merged_count} digabung` : ""}.`,
@@ -268,6 +334,7 @@ export default function CoorPage() {
   const handleRackFilter = (value: string) => {
     setFilterRackId(value);
     setResultPage(1);
+    clearSelection();
   };
   const handleOpenUploadReport = async (uploadId: number) => {
     try {
@@ -336,6 +403,126 @@ export default function CoorPage() {
     coordinator.status === "COMPLETED" ||
     coordinator.status === "CANCELLED";
 
+  const selectedItemsList = Array.from(selectedItems.values());
+  const selectedCount = selectedItemsList.length;
+  const selectedRackId = selectedItemsList.length > 0
+    ? selectedItemsList.every((item) => item.rackId === selectedItemsList[0].rackId)
+      ? selectedItemsList[0].rackId
+      : undefined
+    : undefined;
+  const selectedRack = selectedRackId !== undefined
+    ? racks.find((item) => item.id === selectedRackId)
+    : undefined;
+  const mixedSelectedFactor = new Set(selectedItemsList.map((item) => item.sellFactor)).size > 1;
+  const moveDisabledReason = selectedCount === 0
+    ? "Pilih item terlebih dahulu."
+    : selectedRackId === undefined
+      ? "Pilih item dari satu rak untuk memindahkan."
+      : !selectedRack
+        ? "Rak sumber tidak ditemukan."
+        : coordinatorReadOnly
+          ? "Sesi atau koordinator sudah final."
+          : undefined;
+  const filterActive = resultSearch.trim() !== "" || filterRackId !== "";
+
+  const openItemFactor = (item: { id: number; name: string; sellFactor: SellFactor }) => {
+    setFactorTarget({
+      scope: "item",
+      scopeId: item.id,
+      label: item.name,
+      itemCount: 1,
+      currentFactor: item.sellFactor,
+    });
+  };
+
+  const openRackFactor = (item: Rack) => {
+    setFactorTarget({
+      scope: "rack",
+      scopeId: item.id,
+      label: item.name,
+      itemCount: item.itemCount,
+    });
+  };
+
+  const openCoordinatorFactor = () => {
+    setFactorTarget({
+      scope: "coordinator",
+      scopeId: id,
+      label: coordinator.code,
+      itemCount: rack?.total_items ?? 0,
+    });
+  };
+
+  const openSelectedFactor = () => {
+    setFactorTarget({
+      scope: "items",
+      resultIds: selectedItemsList.map((item) => item.id),
+      label: `${selectedCount} item terpilih`,
+      itemCount: selectedCount,
+      mixed: mixedSelectedFactor,
+    });
+  };
+
+  const activateFilterMode = () => {
+    setRowSelection({});
+    setSelectedItems(new Map());
+    setSelectionMode("filter");
+  };
+
+  const openFilterFactor = () => {
+    setFactorTarget({
+      scope: "filter",
+      label: "Semua hasil filter",
+      itemCount: resultTotalItems,
+      mixed: true,
+    });
+  };
+
+  const openSelectedMove = () => {
+    if (selectedCount === 0 || !selectedRack || moveDisabledReason) return;
+    setMoveState({
+      sourceRackId: selectedRack.id,
+      sourceRackName: selectedRack.name,
+      resultIds: selectedItemsList.map((item) => item.id),
+      itemCount: selectedCount,
+    });
+  };
+
+  const handleFactorSubmit = async (factor: SellFactor, note: string) => {
+    if (!factorTarget) return;
+    try {
+      const result = await setSellFactor(session, {
+        scope: factorTarget.scope,
+        scopeId: factorTarget.scopeId,
+        resultIds: factorTarget.resultIds,
+        filter: factorTarget.scope === "filter"
+          ? {
+              search: resultSearch.trim() || undefined,
+              coordinatorId: id,
+              rakId: filterRackId ? Number(filterRackId) : undefined,
+            }
+          : undefined,
+        factor,
+        note,
+      });
+      await loadData();
+      clearSelection();
+      setFactorTarget(undefined);
+      setAuditRefresh((value) => value + 1);
+      showToast(
+        result.updated_count === 0
+          ? "Tidak ada perubahan faktor."
+          : `${result.updated_count} item berhasil diubah faktornya.`,
+      );
+    } catch (mutationError) {
+      showToast(
+        mutationError instanceof Error ? mutationError.message : "Gagal mengubah faktor jual.",
+        "error",
+      );
+      throw mutationError;
+    }
+  };
+
   return (
     <div className="min-w-0 p-0 sm:p-2">
       <div className="mb-3">
@@ -374,6 +561,20 @@ export default function CoorPage() {
           </div>
           <div className="flex flex-wrap gap-2 sm:gap-5">
             <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={openCoordinatorFactor}
+                disabled={(rack?.total_items ?? 0) === 0 || (rack?.total_items ?? 0) > 1000}
+                title={
+                  (rack?.total_items ?? 0) === 0
+                    ? "Belum ada hasil stock opname."
+                    : (rack?.total_items ?? 0) > 1000
+                      ? "Lebih dari 1000 hasil; pecah per rak."
+                      : undefined
+                }
+              >
+                Faktor Jual
+              </Button>
               <Button
                 variant="default"
                 onClick={() => { setPendingAction("COMPLETED"); setConfirmOpen(true); }}
@@ -472,6 +673,7 @@ export default function CoorPage() {
               handleDeleteRack,
               handleRackMoveRequest,
               coordinatorReadOnly,
+              openRackFactor,
             )}
             data={racks}
           />
@@ -483,29 +685,59 @@ export default function CoorPage() {
           <CardDescription>Data terkini hasil koreksi admin</CardDescription>
         </CardHeader>
         <CardContent>
+          <ResultSelectionBar
+            mode={selectionMode}
+            count={selectionMode === "filter" ? resultTotalItems : selectedCount}
+            onFactor={selectionMode === "filter" ? openFilterFactor : openSelectedFactor}
+            onMove={selectionMode === "filter" ? undefined : openSelectedMove}
+            moveDisabledReason={selectionMode === "filter" ? undefined : moveDisabledReason}
+            onClear={clearSelection}
+          />
           <StockOpnameTable
             columns={createResultColumns(
               handleResultUpdate,
               handleResultDelete,
               handleMoveRequest,
               coordinatorReadOnly,
+              openItemFactor,
             )}
             data={results}
+            selectable
+            rowSelection={rowSelection}
+            onRowSelectionChange={handleRowSelectionChange}
+            getRowId={(item) => String(item.id)}
             filters={
-              <select
-                aria-label="Filter rak"
-                className="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-background [&>option]:text-foreground"
-                value={filterRackId}
-                onChange={(event) => handleRackFilter(event.target.value)}
-                disabled={racks.length === 0}
-              >
-                <option value="">Semua rak</option>
-                {racks.map((rack) => (
-                  <option key={rack.id} value={rack.id}>
-                    {rack.name}
-                  </option>
-                ))}
-              </select>
+              <div className="flex flex-wrap gap-2">
+                <select
+                  aria-label="Filter rak"
+                  className="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-background [&>option]:text-foreground"
+                  value={filterRackId}
+                  onChange={(event) => handleRackFilter(event.target.value)}
+                  disabled={racks.length === 0}
+                >
+                  <option value="">Semua rak</option>
+                  {racks.map((rack) => (
+                    <option key={rack.id} value={rack.id}>
+                      {rack.name}
+                    </option>
+                  ))}
+                </select>
+                {filterActive ? (
+                  <Button
+                    variant={selectionMode === "filter" ? "default" : "outline"}
+                    size="sm"
+                    onClick={activateFilterMode}
+                    disabled={selectionMode === "filter" || resultTotalItems === 0 || resultTotalItems > 1000}
+                    title={
+                      resultTotalItems > 1000
+                        ? "Persempit filter; maksimal 1000 baris."
+                        : undefined
+                    }
+                  >
+                    Pilih semua {resultTotalItems} hasil filter
+                  </Button>
+                ) : null}
+              </div>
             }
             addButton={
               <StockOpnameAddItemButton
@@ -565,6 +797,17 @@ export default function CoorPage() {
         }
         open={qrOpen}
         onClose={() => setQrOpen(false)}
+      />
+      <SellFactorDialog
+        key={`${factorTarget?.scope ?? "closed"}-${factorTarget?.scopeId ?? ""}-${factorTarget?.itemCount ?? 0}`}
+        open={Boolean(factorTarget)}
+        onOpenChange={(open) => { if (!open) setFactorTarget(undefined); }}
+        scope={factorTarget?.scope ?? "item"}
+        label={factorTarget?.label ?? ""}
+        itemCount={factorTarget?.itemCount ?? 0}
+        currentFactor={factorTarget?.currentFactor}
+        mixed={factorTarget?.mixed}
+        onSubmit={handleFactorSubmit}
       />
     </div>
   );

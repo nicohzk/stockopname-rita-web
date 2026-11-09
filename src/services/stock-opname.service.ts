@@ -1,9 +1,45 @@
 import { api, type ApiResponse } from "@/lib/api";
-import type { Pagination, StockOpname, StockOpnameCreateRequest, StockOpnameMoveRequest, StockOpnameMoveResponse, StockOpnameUpdateRequest } from "@/types/stock-opname";
+import type {
+  Pagination,
+  SellFactorScope,
+  SellSummaryResponse,
+  SetSellFactorRequest,
+  SetSellFactorResponse,
+  StockOpname,
+  StockOpnameCreateRequest,
+  StockOpnameMoveRequest,
+  StockOpnameMoveResponse,
+  StockOpnameUpdateRequest,
+} from "@/types/stock-opname";
 
-type StockOpnameResponse = { id: number; barcode: string; plu: string; product_name: string; quantity: number; rak_id: number; rak_name: string; coordinator_id: number; coor_code: string; updatedAt: string };
+type StockOpnameResponse = {
+  id: number;
+  barcode: string;
+  plu: string;
+  product_name: string;
+  quantity: number;
+  sell_factor: number;
+  rak_id: number;
+  rak_name: string;
+  coordinator_id: number;
+  coor_code: string;
+  updatedAt: string;
+};
+
 function mapResult(item: StockOpnameResponse): StockOpname {
-  return { id: item.id, barcode: item.barcode, plu: item.plu, name: item.product_name, quantity: item.quantity, rackId: item.rak_id, rackName: item.rak_name, coordinatorId: item.coordinator_id, coordinator: item.coor_code, updatedAt: item.updatedAt };
+  return {
+    id: item.id,
+    barcode: item.barcode,
+    plu: item.plu,
+    name: item.product_name,
+    quantity: item.quantity,
+    sellFactor: (item.sell_factor ?? 1) as StockOpname["sellFactor"],
+    rackId: item.rak_id,
+    rackName: item.rak_name,
+    coordinatorId: item.coordinator_id,
+    coordinator: item.coor_code,
+    updatedAt: item.updatedAt,
+  };
 }
 
 export async function getStockOpnames(params: { page?: number; limit?: number; search?: string; sessionId?: number; coordinatorId?: number; rakId?: number } = {}) {
@@ -42,3 +78,34 @@ export function moveStockOpname(data: StockOpnameMoveRequest) {
     }),
   });
 }
+
+export async function setSellFactor(sessionId: number, data: SetSellFactorRequest) {
+  const body = {
+    scope: data.scope,
+    scope_id: data.scopeId,
+    result_ids: data.resultIds,
+    filter: data.filter
+      ? {
+          search: data.filter.search,
+          coordinator_id: data.filter.coordinatorId,
+          rak_id: data.filter.rakId,
+        }
+      : undefined,
+    factor: data.factor,
+    note: data.note ?? "",
+  };
+  const response = await api<ApiResponse<SetSellFactorResponse>>(`/stockopname/sessions/${sessionId}/sell-factor`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+  return response.data;
+}
+
+export async function getSellSummary(sessionId: number, groupBy: "session" | "coordinator" | "rack") {
+  const response = await api<ApiResponse<SellSummaryResponse>>(
+    `/stockopname/sessions/${sessionId}/sell-summary?groupBy=${groupBy}`,
+  );
+  return response.data;
+}
+
+export type { SellFactorScope };

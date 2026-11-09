@@ -10,6 +10,7 @@ export const createColumns = (
   onDelete: (rakId: number) => Promise<void>,
   onMove?: (rack: Rack) => void,
   readOnly = false,
+  onFactor?: (rack: Rack) => void,
 ) =>
   columnHelper.columns([
     columnHelper.accessor("name", {
@@ -38,8 +39,8 @@ export const createColumns = (
       header: "Aksi",
       size: 180,
       cell: ({ row }) => {
-        if (readOnly) return null;
-        return <RackTableButton item={row.original} onDelete={onDelete} onMove={onMove} />;
+        if (readOnly && !onFactor) return null;
+        return <RackTableButton item={row.original} onDelete={onDelete} onMove={onMove} onFactor={onFactor} readOnly={readOnly} />;
       },
     }),
   ]);

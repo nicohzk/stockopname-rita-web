@@ -15,7 +15,7 @@ import {
 
 import type { StockOpname } from "@/types/stock-opname";
 
-export default function StockOpnameTableButton({ item, onUpdate, onDelete, onMove }: { item: StockOpname; onUpdate: (id: number, quantity: number) => Promise<void>; onDelete: (id: number) => Promise<void>; onMove?: (item: StockOpname) => void }) {
+export default function StockOpnameTableButton({ item, onUpdate, onDelete, onMove, onFactor, readOnly = false }: { item: StockOpname; onUpdate: (id: number, quantity: number) => Promise<void>; onDelete: (id: number) => Promise<void>; onMove?: (item: StockOpname) => void; onFactor?: (item: StockOpname) => void; readOnly?: boolean }) {
   const [open, setOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -60,10 +60,15 @@ export default function StockOpnameTableButton({ item, onUpdate, onDelete, onMov
         }
       />
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => { setValidationError(undefined); setOpen(true); }}>Edit</DropdownMenuItem>
-        {onMove ? <DropdownMenuItem onClick={() => onMove(item)}>Pindahkan</DropdownMenuItem> : null}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => setConfirmOpen(true)}>Delete</DropdownMenuItem>
+        {onFactor ? <DropdownMenuItem onClick={() => onFactor(item)}>Faktor Jual</DropdownMenuItem> : null}
+        {!readOnly ? (
+          <>
+            <DropdownMenuItem onClick={() => { setValidationError(undefined); setOpen(true); }}>Edit</DropdownMenuItem>
+            {onMove ? <DropdownMenuItem onClick={() => onMove(item)}>Pindahkan</DropdownMenuItem> : null}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={() => setConfirmOpen(true)}>Delete</DropdownMenuItem>
+          </>
+        ) : null}
       </DropdownMenuContent>
       </DropdownMenu>
       <DialogContent>

@@ -15,6 +15,7 @@ export type AuditData = {
   quantity: number;
   buy_price: number;
   sell_price: number;
+  sell_factor?: number;
 };
 
 export type AuditEntry = {
@@ -28,5 +29,14 @@ export type AuditEntry = {
   note: string;
   before: AuditData | null;
   after: AuditData | null;
+  created_at: string;
+};
+
+export type AuditBatchSummary = {
+  batch_id: string;
+  action: AuditAction;
+  actor: string;
+  note: string;
+  item_count: number;
   created_at: string;
 };
