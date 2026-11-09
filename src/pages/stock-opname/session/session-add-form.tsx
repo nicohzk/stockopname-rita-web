@@ -77,7 +77,7 @@ export default function SessionAddForm({
 
           <div className="space-y-2">
             <Label htmlFor="location">Lokasi</Label>
-            <Input id="location" value={step1.location} onChange={(e) => setStep1({ ...step1, location: e.target.value })} required />
+            <Input id="location" value={step1.location} onChange={(e) => setStep1({ ...step1, location: e.target.value })} maxLength={100} required />
           </div>
 
           <div className="space-y-2 overflow-y-auto max-h-60">

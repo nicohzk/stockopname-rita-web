@@ -25,15 +25,15 @@ export default function ProductAddForm({ onSubmit, initialData, submitLabel = "T
     <form className="space-y-4" onSubmit={handleSubmit}>
       <div className="space-y-2">
         <Label htmlFor="plu">PLU</Label>
-        <Input id="plu" name="plu" defaultValue={initialData?.plu} required />
+        <Input id="plu" name="plu" defaultValue={initialData?.plu} maxLength={10} required />
       </div>
       <div className="space-y-2">
         <Label htmlFor="name">Nama</Label>
-        <Input id="name" name="name" defaultValue={initialData?.name} required />
+        <Input id="name" name="name" defaultValue={initialData?.name} maxLength={150} required />
       </div>
       <div className="space-y-2">
         <Label htmlFor="departmentCode">Department Code</Label>
-        <Input id="departmentCode" name="departmentCode" defaultValue={initialData?.department} placeholder="cth: RTD, FROZEN" required />
+        <Input id="departmentCode" name="departmentCode" defaultValue={initialData?.department} placeholder="cth: RTD, FROZEN" maxLength={10} required />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -56,7 +56,7 @@ export default function ProductAddForm({ onSubmit, initialData, submitLabel = "T
             </div>
           ))}
           <div className="flex gap-2">
-            <Input value={newBarcode} onChange={(e) => setNewBarcode(e.target.value)} placeholder="Scan / ketik barcode" />
+            <Input value={newBarcode} onChange={(e) => setNewBarcode(e.target.value)} placeholder="Scan / ketik barcode" maxLength={15} />
             <Button type="button" variant="secondary" onClick={() => { const v = newBarcode.trim(); if (v && !barcodes.includes(v)) setBarcodes([...barcodes, v]); setNewBarcode(""); }}>Tambah</Button>
           </div>
         </div>
