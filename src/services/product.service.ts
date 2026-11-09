@@ -10,6 +10,7 @@ function mapProduct(product: ProductResponse): Product {
     name: product.name,
     buyPrice: product.buy_price,
     sellPrice: product.sell_price,
+    perCarton: product.per_carton ?? 0,
     lastUpdate: product.date_updated,
     department: product.department_code,
   };
@@ -30,7 +31,7 @@ export async function getProductCount(sessionId: number) {
 export async function createProduct(sessionId: number, data: CreateProductRequest) {
   const response = await api<ApiResponse<ProductResponse>>("/products", {
     method: "POST",
-    body: JSON.stringify({ sesi_id: sessionId, plu: data.plu, name: data.name, buy_price: data.buyPrice, sell_price: data.sellPrice, department_code: data.departmentCode, barcodes: data.barcodes }),
+    body: JSON.stringify({ sesi_id: sessionId, plu: data.plu, name: data.name, buy_price: data.buyPrice, sell_price: data.sellPrice, department_code: data.departmentCode, per_carton: data.perCarton ?? 0, barcodes: data.barcodes }),
   });
   return mapProduct(response.data);
 }
@@ -42,7 +43,7 @@ export async function updateProduct(
 ) {
   return api<ApiResponse<ProductResponse>>(`/products/${id}?sessionId=${sessionId}`, {
     method: "PATCH",
-    body: JSON.stringify({ plu: data.plu, name: data.name, buy_price: data.buyPrice, sell_price: data.sellPrice, department_code: data.departmentCode, barcodes: data.barcodes }),
+    body: JSON.stringify({ plu: data.plu, name: data.name, buy_price: data.buyPrice, sell_price: data.sellPrice, department_code: data.departmentCode, per_carton: data.perCarton, barcodes: data.barcodes }),
   });
 }
 

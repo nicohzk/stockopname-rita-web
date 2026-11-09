@@ -20,22 +20,22 @@ export default function CoordinatorPrintMenu({
   status: CoordinatorStatus;
   onShowQR: () => void;
 }) {
-  const [printing, setPrinting] = useState(false);
+  const [printing, setPrinting] = useState<"pdf" | "pdf-carton" | null>(null);
   const { showToast } = useToast();
   const qrEnabled = status === "IN_PROGRESS";
 
-  const handlePrintPdf = async () => {
+  const handlePrintPdf = async (includeCarton: boolean) => {
     if (printing) return;
-    setPrinting(true);
+    setPrinting(includeCarton ? "pdf-carton" : "pdf");
     try {
-      await openCoordinatorReport(coordinatorId);
+      await openCoordinatorReport(coordinatorId, includeCarton);
     } catch (error) {
       showToast(
         error instanceof Error ? error.message : "Gagal membuat PDF.",
         "error",
       );
     } finally {
-      setPrinting(false);
+      setPrinting(null);
     }
   };
 
@@ -56,11 +56,18 @@ export default function CoordinatorPrintMenu({
           Lihat QR
         </DropdownMenuItem>
         <DropdownMenuItem
-          disabled={printing}
-          onClick={() => void handlePrintPdf()}
+          disabled={printing !== null}
+          onClick={() => void handlePrintPdf(false)}
         >
           <FileText />
-          {printing ? "Membuat PDF..." : "Cetak PDF"}
+          {printing === "pdf" ? "Membuat PDF..." : "Cetak PDF"}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={printing !== null}
+          onClick={() => void handlePrintPdf(true)}
+        >
+          <FileText />
+          {printing === "pdf-carton" ? "Membuat PDF + Karton..." : "Cetak PDF + Karton"}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

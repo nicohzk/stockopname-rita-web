@@ -30,6 +30,7 @@ const fields = columnHelper.columns([
     size: 90,
     cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
+  columnHelper.accessor("perCarton", { header: "Per Karton", size: 90 }),
   columnHelper.accessor("buyPrice", { header: "Buy Price", size: 100 }),
   columnHelper.accessor("sellPrice", { header: "Sell Price", size: 100 }),
   columnHelper.accessor("lastUpdate", {

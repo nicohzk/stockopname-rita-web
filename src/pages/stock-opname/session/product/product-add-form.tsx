@@ -17,6 +17,7 @@ export default function ProductAddForm({ onSubmit, initialData, submitLabel = "T
       departmentCode: String(formData.get("departmentCode") ?? "").trim(),
       buyPrice: Number(formData.get("buyPrice")),
       sellPrice: Number(formData.get("sellPrice")),
+      perCarton: Math.max(0, Math.trunc(Number(formData.get("perCarton") ?? 0))),
       barcodes,
     });
   };
@@ -44,6 +45,11 @@ export default function ProductAddForm({ onSubmit, initialData, submitLabel = "T
           <Label htmlFor="sellPrice">Harga Jual</Label>
           <Input id="sellPrice" name="sellPrice" type="number" min="0" step="any" defaultValue={initialData?.sellPrice} required />
         </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="perCarton">Produk per Karton</Label>
+        <Input id="perCarton" name="perCarton" type="number" min="0" step="1" defaultValue={initialData?.perCarton ?? 0} />
+        <p className="text-muted-foreground text-xs">Isi 0 jika produk tidak dihitung per karton.</p>
       </div>
       {initialData && (
         <div className="space-y-2">

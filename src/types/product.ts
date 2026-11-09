@@ -5,6 +5,7 @@ export type Product = {
   name: string;
   buyPrice: number;
   sellPrice: number;
+  perCarton: number;
   lastUpdate: string;
   department: string;
 };
@@ -15,6 +16,7 @@ export type CreateProductRequest = {
   buyPrice: number;
   sellPrice: number;
   departmentCode: string;
+  perCarton?: number;
   barcodes?: string[];
 };
 
@@ -24,6 +26,7 @@ export type UpdateProductRequest = {
   buyPrice?: number;
   sellPrice?: number;
   departmentCode?: string;
+  perCarton?: number;
   barcodes?: string[];
 };
 
@@ -34,6 +37,7 @@ export type ProductResponse = {
   name: string;
   buy_price: number;
   sell_price: number;
+  per_carton: number;
   date_created: string;
   date_updated: string;
   department_code: string;
