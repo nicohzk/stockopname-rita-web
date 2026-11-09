@@ -258,6 +258,7 @@ export default function CoorPage() {
     };
   }, [id, session, fetchPageData, applyPageData]);
   useEffect(() => {
+    if (resultSearchInput === resultSearch) return;
     const timer = window.setTimeout(() => {
       setLoading(true);
       setError(undefined);
@@ -268,7 +269,7 @@ export default function CoorPage() {
       setSelectionMode("manual");
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [resultSearchInput]);
+  }, [resultSearchInput, resultSearch]);
 
   const changeStatus = async (status: "COMPLETED" | "CANCELLED") => {
     const canComplete = coordinator?.status === "IN_REVIEW";

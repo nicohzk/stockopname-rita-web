@@ -82,6 +82,7 @@ export default function ProductPage() {
   };
 
   useEffect(() => {
+    if (searchInput === search) return;
     const timer = window.setTimeout(() => {
       setProductsLoading(true);
       setProductsError(undefined);
@@ -89,7 +90,7 @@ export default function ProductPage() {
       setPage(1);
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, search]);
 
   useEffect(() => {
     if (!Number.isFinite(id)) return;
