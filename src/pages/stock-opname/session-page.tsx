@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import type { RowSelectionState, Updater } from "@tanstack/react-table";
 import { Separator } from "@/components/ui/separator";
@@ -118,24 +118,32 @@ export default function SessionPage() {
     resultIds?: number[];
   }>();
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      setError(undefined);
-      const [loadedSession, loadedCoordinators, loadedResults, loadedProgress, loadedProductCount] =
-        await Promise.all([
-          getSession(id),
-          getCoordinators(id),
-          getStockOpnames({
-            sessionId: id,
-            coordinatorId: filterCoordinatorId ? Number(filterCoordinatorId) : undefined,
-            rakId: filterRackId ? Number(filterRackId) : undefined,
-            page: resultPage,
-            search: resultSearch,
-          }),
-          getRackProgress({ sessionId: id }),
-          getProductCount(id),
-        ]);
+  const fetchPageData = useCallback(
+    () =>
+      Promise.all([
+        getSession(id),
+        getCoordinators(id),
+        getStockOpnames({
+          sessionId: id,
+          coordinatorId: filterCoordinatorId ? Number(filterCoordinatorId) : undefined,
+          rakId: filterRackId ? Number(filterRackId) : undefined,
+          page: resultPage,
+          search: resultSearch,
+        }),
+        getRackProgress({ sessionId: id }),
+        getProductCount(id),
+      ]),
+    [id, filterCoordinatorId, filterRackId, resultPage, resultSearch],
+  );
+
+  const applyPageData = useCallback(
+    ([
+      loadedSession,
+      loadedCoordinators,
+      loadedResults,
+      loadedProgress,
+      loadedProductCount,
+    ]: Awaited<ReturnType<typeof fetchPageData>>) => {
       setSession(loadedSession);
       setCoordinators(loadedCoordinators);
       setResults(loadedResults.data);
@@ -144,6 +152,16 @@ export default function SessionPage() {
       setResultTotalItems(loadedResults.pagination.total_items ?? 0);
       setProgress(loadedProgress);
       setProductCount(loadedProductCount);
+      setError(undefined);
+    },
+    [],
+  );
+
+  const loadData = async () => {
+    setLoading(true);
+    setError(undefined);
+    try {
+      applyPageData(await fetchPageData());
     } catch (loadError) {
       setError(
         loadError instanceof Error
@@ -229,8 +247,29 @@ export default function SessionPage() {
   };
 
   useEffect(() => {
-    if (Number.isFinite(id)) void loadData();
-  }, [id, resultPage, resultSearch, filterCoordinatorId, filterRackId]);
+    if (!Number.isFinite(id)) return;
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const data = await fetchPageData();
+        if (cancelled) return;
+        applyPageData(data);
+      } catch (loadError) {
+        if (cancelled) return;
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Gagal memuat data sesi.",
+        );
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, fetchPageData, applyPageData]);
   useEffect(() => {
     if (!Number.isFinite(id)) return;
     // Filter options only; a failure must not block the result table.
@@ -238,6 +277,8 @@ export default function SessionPage() {
   }, [id]);
   useEffect(() => {
     const timer = window.setTimeout(() => {
+      setLoading(true);
+      setError(undefined);
       setResultSearch(resultSearchInput);
       setResultPage(1);
       setRowSelection({});
@@ -345,15 +386,24 @@ export default function SessionPage() {
   };
 
   const handleCoordinatorFilter = (value: string) => {
+    setLoading(true);
+    setError(undefined);
     setFilterCoordinatorId(value);
     setFilterRackId("");
     setResultPage(1);
     clearSelection();
   };
   const handleRackFilter = (value: string) => {
+    setLoading(true);
+    setError(undefined);
     setFilterRackId(value);
     setResultPage(1);
     clearSelection();
+  };
+  const handleResultPageChange = (nextPage: number) => {
+    setLoading(true);
+    setError(undefined);
+    setResultPage(nextPage);
   };
   const coordinatorCodeById = new Map(coordinators.map((coordinator) => [coordinator.id, coordinator.code]));
   const coordinatorStatusById = new Map(coordinators.map((coordinator) => [coordinator.id, coordinator.status]));
@@ -753,7 +803,7 @@ export default function SessionPage() {
             loading={loading}
             page={resultPage}
             totalPages={resultTotalPages}
-            onPageChange={setResultPage}
+            onPageChange={handleResultPageChange}
           />
         </CardContent>
       </Card>

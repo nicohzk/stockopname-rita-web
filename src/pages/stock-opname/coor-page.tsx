@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import type { RowSelectionState, Updater } from "@tanstack/react-table";
 import { Separator } from "@/components/ui/separator";
@@ -120,16 +120,9 @@ export default function CoorPage() {
     resultIds?: number[];
   }>();
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      setError(undefined);
-      const [
-        loadedSession,
-        loadedCoordinator,
-        loadedResults,
-        loadedProgress,
-      ] = await Promise.all([
+  const fetchPageData = useCallback(async () => {
+    const [loadedSession, loadedCoordinator, loadedResults, loadedProgress] =
+      await Promise.all([
         getSession(session),
         getCoordinator(id),
         getStockOpnames({
@@ -141,28 +134,59 @@ export default function CoorPage() {
         }),
         getRackProgress({ sessionId: session, coordinatorId: id }),
       ]);
-      const [racksResult, allRacksResult, coordinatorsResult, uploadsResult] = await Promise.allSettled([
+    const [racksResult, allRacksResult, coordinatorsResult, uploadsResult] =
+      await Promise.allSettled([
         getRacks({ sessionId: session, coordinatorId: id }),
         getRacks({ sessionId: session }),
         getCoordinators(session),
         getUploads(id),
       ]);
-      setSessionData(loadedSession);
-      setCoordinator(loadedCoordinator);
-      const allRacksValue = allRacksResult.status === "fulfilled" ? allRacksResult.value : [];
-      setAllRacks(allRacksValue);
-      setCoordinators(coordinatorsResult.status === "fulfilled" ? coordinatorsResult.value : []);
-      const allRacks = racksResult.status === "fulfilled" ? racksResult.value : [];
-      setRacks(allRacks);
-      setUploads(uploadsResult.status === "fulfilled" ? uploadsResult.value : []);
-      if (uploadsResult.status === "rejected") {
+    return {
+      loadedSession,
+      loadedCoordinator,
+      loadedResults,
+      loadedProgress,
+      racksResult,
+      allRacksResult,
+      coordinatorsResult,
+      uploadsResult,
+    };
+  }, [session, id, filterRackId, resultPage, resultSearch]);
+
+  const applyPageData = useCallback(
+    (data: Awaited<ReturnType<typeof fetchPageData>>) => {
+      setSessionData(data.loadedSession);
+      setCoordinator(data.loadedCoordinator);
+      setAllRacks(
+        data.allRacksResult.status === "fulfilled" ? data.allRacksResult.value : [],
+      );
+      setCoordinators(
+        data.coordinatorsResult.status === "fulfilled"
+          ? data.coordinatorsResult.value
+          : [],
+      );
+      setRacks(data.racksResult.status === "fulfilled" ? data.racksResult.value : []);
+      setUploads(
+        data.uploadsResult.status === "fulfilled" ? data.uploadsResult.value : [],
+      );
+      if (data.uploadsResult.status === "rejected") {
         showToast("Gagal memuat riwayat upload.", "error");
       }
-      setResults(loadedResults.data);
-      setResultPage(loadedResults.pagination.page);
-      setResultTotalPages(loadedResults.pagination.total_pages || 1);
-      setResultTotalItems(loadedResults.pagination.total_items ?? 0);
-      setProgress(loadedProgress);
+      setResults(data.loadedResults.data);
+      setResultPage(data.loadedResults.pagination.page);
+      setResultTotalPages(data.loadedResults.pagination.total_pages || 1);
+      setResultTotalItems(data.loadedResults.pagination.total_items ?? 0);
+      setProgress(data.loadedProgress);
+      setError(undefined);
+    },
+    [showToast],
+  );
+
+  const loadData = async () => {
+    setLoading(true);
+    setError(undefined);
+    try {
+      applyPageData(await fetchPageData());
     } catch (loadError) {
       setError(
         loadError instanceof Error
@@ -210,10 +234,33 @@ export default function CoorPage() {
   };
 
   useEffect(() => {
-    if (Number.isFinite(id) && Number.isFinite(session)) void loadData();
-  }, [id, session, resultPage, resultSearch, filterRackId]);
+    if (!Number.isFinite(id) || !Number.isFinite(session)) return;
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const data = await fetchPageData();
+        if (cancelled) return;
+        applyPageData(data);
+      } catch (loadError) {
+        if (cancelled) return;
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Gagal memuat data koordinator.",
+        );
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, session, fetchPageData, applyPageData]);
   useEffect(() => {
     const timer = window.setTimeout(() => {
+      setLoading(true);
+      setError(undefined);
       setResultSearch(resultSearchInput);
       setResultPage(1);
       setRowSelection({});
@@ -332,9 +379,16 @@ export default function CoorPage() {
   };
 
   const handleRackFilter = (value: string) => {
+    setLoading(true);
+    setError(undefined);
     setFilterRackId(value);
     setResultPage(1);
     clearSelection();
+  };
+  const handleResultPageChange = (nextPage: number) => {
+    setLoading(true);
+    setError(undefined);
+    setResultPage(nextPage);
   };
   const handleOpenUploadReport = async (uploadId: number) => {
     try {
@@ -752,7 +806,7 @@ export default function CoorPage() {
             loading={loading}
             page={resultPage}
             totalPages={resultTotalPages}
-            onPageChange={setResultPage}
+            onPageChange={handleResultPageChange}
           />
         </CardContent>
       </Card>

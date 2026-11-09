@@ -49,6 +49,13 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
     setOpen(nextOpen);
   };
 
+  const handleCoordinatorChange = (value: Option | null) => {
+    setCoordinator(value);
+    setRack(null);
+    setRacks([]);
+    setValidationError(undefined);
+  };
+
   useEffect(() => {
     if (open) {
       void getProducts(sessionId, 1, 20, productSearch).then((result) => setProducts(result.data)).catch((error: unknown) => showToast(error instanceof Error ? error.message : "Gagal memuat data produk.", "error"));
@@ -63,8 +70,20 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
   }, [productSearchInput]);
 
   useEffect(() => {
-    setRack(null); setRacks([]);
-    if (coordinator) void getRacks({ sessionId, coordinatorId: Number(coordinator.value) }).then(setRacks).catch((error: unknown) => showToast(error instanceof Error ? error.message : "Gagal memuat data rak.", "error"));
+    if (!coordinator) return;
+    let cancelled = false;
+    void getRacks({ sessionId, coordinatorId: Number(coordinator.value) })
+      .then((result) => {
+        if (!cancelled) setRacks(result);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          showToast(error instanceof Error ? error.message : "Gagal memuat data rak.", "error");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [coordinator, sessionId, showToast]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -96,7 +115,7 @@ export default function StockOpnameAddItemButton({ sessionId, coordinators, onSu
       <DialogContent>
         <DialogHeader><DialogTitle>Tambah Item</DialogTitle><Separator /></DialogHeader>
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-2"><Label>Koordinator</Label><Combobox items={coordinators.map((item) => ({ value: String(item.id), label: item.code }))} value={coordinator} onValueChange={(value) => setCoordinator(value as Option | null)} itemToStringValue={(item: Option) => item.label}><ComboboxInput placeholder="Pilih koordinator" /><ComboboxContent><ComboboxEmpty>Tidak ada data.</ComboboxEmpty><ComboboxList>{(item) => <ComboboxItem key={item.value} value={item}>{item.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox></div>
+          <div className="space-y-2"><Label>Koordinator</Label><Combobox items={coordinators.map((item) => ({ value: String(item.id), label: item.code }))} value={coordinator} onValueChange={handleCoordinatorChange} itemToStringValue={(item: Option) => item.label}><ComboboxInput placeholder="Pilih koordinator" /><ComboboxContent><ComboboxEmpty>Tidak ada data.</ComboboxEmpty><ComboboxList>{(item) => <ComboboxItem key={item.value} value={item}>{item.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox></div>
           <div className="space-y-2"><Label>Rak</Label><Combobox items={racks.map((item) => ({ value: String(item.id), label: item.name }))} value={rack} onValueChange={(value) => setRack(value as Option | null)} disabled={!coordinator} itemToStringValue={(item: Option) => item.label}><ComboboxInput placeholder="Pilih rak" /><ComboboxContent><ComboboxEmpty>Tidak ada data.</ComboboxEmpty><ComboboxList>{(item) => <ComboboxItem key={item.value} value={item}>{item.label}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox></div>
           <div className="space-y-2">
             <Label htmlFor="so-barcode">Scan Barcode</Label>

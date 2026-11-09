@@ -173,33 +173,40 @@ export default function CoordinatorQRPrintPage() {
   const all = searchParams.get("all") === "1";
   const shouldAutoPrint = searchParams.get("auto") === "1";
 
+  const invalidId = !Number.isFinite(id);
   const [session, setSession] = useState<Session>();
   const [coordinators, setCoordinators] = useState<Coordinator[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>();
+  const [loading, setLoading] = useState(!invalidId);
+  const [error, setError] = useState<string | undefined>(
+    invalidId ? "ID sesi tidak valid." : undefined,
+  );
   const [printedAt] = useState(() => formatDateTime(new Date().toISOString()));
   const printed = useRef(false);
 
   useEffect(() => {
-    if (!Number.isFinite(id)) {
-      setError("ID sesi tidak valid.");
-      setLoading(false);
-      return;
-    }
+    if (invalidId) return;
+    let cancelled = false;
     Promise.all([getSession(id), getCoordinators(id)])
       .then(([loadedSession, loadedCoordinators]) => {
+        if (cancelled) return;
         setSession(loadedSession);
         setCoordinators(loadedCoordinators);
       })
       .catch((loadError: unknown) => {
+        if (cancelled) return;
         setError(
           loadError instanceof Error
             ? loadError.message
             : "Gagal memuat data sesi.",
         );
       })
-      .finally(() => setLoading(false));
-  }, [id]);
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, invalidId]);
 
   const labels = useMemo(() => {
     if (!session) return [];

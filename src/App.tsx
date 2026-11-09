@@ -7,7 +7,7 @@ import SessionPage from "./pages/stock-opname/session-page";
 import CoorPage from "./pages/stock-opname/coor-page";
 import CoordinatorQRPrintPage from "./pages/stock-opname/coordinator-qr-print-page";
 import ProductPage from "./pages/stock-opname/product-page";
-import { ToastProvider } from "./components/ui/toast";
+import { ToastProvider } from "./components/ui/toast-provider";
 import { TooltipProvider } from "./components/ui/tooltip";
 
 function App() {
