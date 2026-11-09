@@ -1,24 +1,13 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { Coordinator } from "@/types/coordinator";
-import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TruncatedText } from "@/components/ui/table";
 import { formatRackRange } from "@/lib/rack-range";
 import type { Rack } from "@/types/rack";
+import CoordinatorDetailButton from "./coordinator-detail-button";
 
 const columnHelper = createColumnHelper<DataTableFeatures, Coordinator>();
-
-function CoordinatorDetailButton({ sessionId, coordinatorId }: { sessionId: string; coordinatorId: number }) {
-  const navigate = useNavigate();
-
-  return (
-    <Button onClick={() => navigate(`/stock-opname/sesi/${sessionId}/coordinator/${coordinatorId}`)}>
-      Detail
-    </Button>
-  );
-}
 
 export const createColumns = (sessionId: string, racks: Rack[]) => {
   return columnHelper.columns([

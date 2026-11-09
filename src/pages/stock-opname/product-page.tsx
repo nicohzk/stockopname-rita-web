@@ -57,14 +57,14 @@ export default function ProductPage() {
   }, [id]);
 
   const loadProducts = async (nextPage = page, nextSearch = search) => {
+    setProductsLoading(true);
+    setProductsError(undefined);
     try {
-      setProductsLoading(true);
-      setProductsError(undefined);
-      setSearchInput(nextSearch);
       const result = await getProducts(id, nextPage, 6, nextSearch);
       setProducts(result.data);
       setPage(result.pagination.page);
       setTotalPages(result.pagination.total_pages || 1);
+      setProductsError(undefined);
     } catch (loadError) {
       setProductsError(
         loadError instanceof Error
@@ -75,9 +75,16 @@ export default function ProductPage() {
       setProductsLoading(false);
     }
   };
+  const handlePageChange = (nextPage: number) => {
+    setProductsLoading(true);
+    setProductsError(undefined);
+    setPage(nextPage);
+  };
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
+      setProductsLoading(true);
+      setProductsError(undefined);
       setSearch(searchInput);
       setPage(1);
     }, 250);
@@ -85,7 +92,31 @@ export default function ProductPage() {
   }, [searchInput]);
 
   useEffect(() => {
-    if (Number.isFinite(id)) void loadProducts();
+    if (!Number.isFinite(id)) return;
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const result = await getProducts(id, page, 6, search);
+        if (cancelled) return;
+        setProducts(result.data);
+        setPage(result.pagination.page);
+        setTotalPages(result.pagination.total_pages || 1);
+        setProductsError(undefined);
+      } catch (loadError) {
+        if (cancelled) return;
+        setProductsError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Gagal memuat data produk.",
+        );
+      } finally {
+        if (!cancelled) setProductsLoading(false);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
   }, [id, page, search]);
 
   if (!Number.isFinite(id)) {
@@ -163,7 +194,7 @@ export default function ProductPage() {
               searchValue={searchInput}
               page={page}
               totalPages={totalPages}
-              onPageChange={setPage}
+              onPageChange={handlePageChange}
               loading={productsLoading}
             />
           )}

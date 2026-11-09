@@ -41,21 +41,10 @@ export default function SessionAddForm({
         coordinator.rackEnd < coordinator.rackStart ||
         coordinator.rackEnd - coordinator.rackStart + 1 > 200,
     );
-    const sorted = [...coordinators].sort((a, b) => a.rackStart - b.rackStart);
-    const overlapping = sorted.some(
-      (coordinator, index) =>
-        index > 0 && coordinator.rackStart <= sorted[index - 1].rackEnd,
-    );
 
     if (!code || !location || coordinators.length === 0 || invalidRange) {
       const message =
         "Kode, lokasi, minimal satu koordinator, dan range rak yang valid (1–200 rak) wajib diisi.";
-      setValidationError(message);
-      showToast(message, "error");
-      return;
-    }
-    if (overlapping) {
-      const message = "Range rak antar koordinator tidak boleh overlap.";
       setValidationError(message);
       showToast(message, "error");
       return;
@@ -83,20 +72,24 @@ export default function SessionAddForm({
         <>
           <div className="space-y-2">
             <Label htmlFor="code">Kode</Label>
-            <Input id="code" value={step1.code} onChange={(e) => setStep1({ ...step1, code: e.target.value })} required />
+            <Input id="code" value={step1.code} onChange={(e) => setStep1({ ...step1, code: e.target.value })} maxLength={20} required />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="location">Lokasi</Label>
-            <Input id="location" value={step1.location} onChange={(e) => setStep1({ ...step1, location: e.target.value })} required />
+            <Input id="location" value={step1.location} onChange={(e) => setStep1({ ...step1, location: e.target.value })} maxLength={100} required />
           </div>
 
           <div className="space-y-2 overflow-y-auto max-h-60">
             <Label>Koordinator &amp; Range Rak</Label>
+            <p className="text-muted-foreground text-xs">
+              Nama rak boleh sama antar koordinator; setiap koordinator memiliki rak sendiri.
+            </p>
             {step1.coordinators.map((coordinator, index) => (
               <div key={index} className="flex gap-2">
                 <Input
                   placeholder={`Kode koordinator ${index + 1}`}
+                  maxLength={20}
                   value={coordinator.code}
                   onChange={(e) => {
                     const next = [...step1.coordinators];

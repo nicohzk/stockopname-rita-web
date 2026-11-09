@@ -14,7 +14,7 @@ import {
   openSessionReport,
 } from "@/services/report.service";
 
-type ExportKind = "pdf" | "excel" | "dbf";
+type ExportKind = "pdf" | "pdf-carton" | "excel" | "dbf";
 
 export default function SessionExportMenu({
   sessionId,
@@ -31,6 +31,7 @@ export default function SessionExportMenu({
     setBusy(kind);
     try {
       if (kind === "pdf") await openSessionReport(sessionId);
+      else if (kind === "pdf-carton") await openSessionReport(sessionId, true);
       else if (kind === "excel")
         await downloadSessionExcel(sessionId, `${sessionCode}.xlsx`);
       else await downloadSessionDbf(sessionId, `${sessionCode}.dbf`);
@@ -62,6 +63,13 @@ export default function SessionExportMenu({
         >
           <FileText />
           {busy === "pdf" ? "Membuat PDF..." : "Cetak PDF"}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={busy !== null}
+          onClick={() => void handleExport("pdf-carton")}
+        >
+          <FileText />
+          {busy === "pdf-carton" ? "Membuat PDF + Karton..." : "Cetak PDF + Karton"}
         </DropdownMenuItem>
         <DropdownMenuItem
           disabled={busy !== null}

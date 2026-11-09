@@ -1,11 +1,11 @@
 import { apiBlob } from "@/lib/api";
 
-export async function openSessionReport(id: number) {
-  return openReport(`/stockopname/sessions/${id}/pdf`);
+export async function openSessionReport(id: number, includeCarton = false) {
+  return openReport(`/stockopname/sessions/${id}/pdf${includeCarton ? "?include_carton=true" : ""}`);
 }
 
-export async function openCoordinatorReport(id: number) {
-  return openReport(`/stockopname/coordinators/${id}/pdf`);
+export async function openCoordinatorReport(id: number, includeCarton = false) {
+  return openReport(`/stockopname/coordinators/${id}/pdf${includeCarton ? "?include_carton=true" : ""}`);
 }
 
 export async function openCoordinatorUploadSummary(id: number) {

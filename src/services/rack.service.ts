@@ -1,7 +1,7 @@
 import { api, type ApiResponse } from "@/lib/api";
 
 type RackProgress = { rackAssigned: number; rackCompleted: number; total_items: number };
-type RackResponse = { id: number; name: string; coordinator_id: number; uploaded_at: string };
+type RackResponse = { id: number; name: string; coordinator_id: number; uploaded_at: string; item_count: number; is_empty: boolean };
 
 export async function getRackProgress(params: { sessionId?: number; coordinatorId?: number }) { const query = new URLSearchParams(); if (params.sessionId !== undefined) query.set("sessionId", String(params.sessionId)); if (params.coordinatorId !== undefined) query.set("coordinatorId", String(params.coordinatorId)); const response = await api<ApiResponse<RackProgress[]>>(`/stockopname/racks/progress?${query}`); return response.data ?? []; }
 
@@ -15,6 +15,8 @@ export async function getRacks(params: { sessionId?: number; coordinatorId?: num
 		name: rack.name,
 		coordinatorId: rack.coordinator_id,
 		uploadedAt: rack.uploaded_at ?? "",
+		itemCount: rack.item_count ?? 0,
+		isEmpty: rack.is_empty ?? (rack.item_count ?? 0) === 0,
 	}));
 }
 

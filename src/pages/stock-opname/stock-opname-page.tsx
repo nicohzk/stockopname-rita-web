@@ -58,15 +58,56 @@ export default function StockOpnamePage() {
     }
   };
   const loadSessions = async (nextPage = page, nextSearch = search) => {
-    try { setLoading(true); setError(undefined); const result = await getSessions(nextPage, 6, nextSearch); setSessions(result.data); setPage(result.pagination.page); setTotalPages(result.pagination.total_pages || 1); }
-    catch (loadError) { setError(loadError instanceof Error ? loadError.message : "Gagal memuat data sesi."); }
-    finally { setLoading(false); }
+    setLoading(true);
+    setError(undefined);
+    try {
+      const result = await getSessions(nextPage, 6, nextSearch);
+      setSessions(result.data);
+      setPage(result.pagination.page);
+      setTotalPages(result.pagination.total_pages || 1);
+      setError(undefined);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Gagal memuat data sesi.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  const handlePageChange = (nextPage: number) => {
+    setLoading(true);
+    setError(undefined);
+    setPage(nextPage);
   };
   useEffect(() => {
-    const timer = window.setTimeout(() => { setSearch(searchInput); setPage(1); }, 250);
+    const timer = window.setTimeout(() => {
+      setLoading(true);
+      setError(undefined);
+      setSearch(searchInput);
+      setPage(1);
+    }, 250);
     return () => window.clearTimeout(timer);
   }, [searchInput]);
-  useEffect(() => { void loadSessions(); }, [page, search]);
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const result = await getSessions(page, 6, search);
+        if (cancelled) return;
+        setSessions(result.data);
+        setPage(result.pagination.page);
+        setTotalPages(result.pagination.total_pages || 1);
+        setError(undefined);
+      } catch (loadError) {
+        if (cancelled) return;
+        setError(loadError instanceof Error ? loadError.message : "Gagal memuat data sesi.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [page, search]);
   useEffect(() => {
     let cancelled = false;
     getSessions(1, 1000)
@@ -127,7 +168,7 @@ export default function StockOpnamePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <SessionTable columns={columns} data={sessions} addButton={<SessionAddBtn onSubmit={handleCreate} />} error={error} onSearch={setSearchInput} searchValue={searchInput} loading={loading} page={page} totalPages={totalPages} onPageChange={setPage} />
+          <SessionTable columns={columns} data={sessions} addButton={<SessionAddBtn onSubmit={handleCreate} />} error={error} onSearch={setSearchInput} searchValue={searchInput} loading={loading} page={page} totalPages={totalPages} onPageChange={handlePageChange} />
         </CardContent>
       </Card>
     </div>

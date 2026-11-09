@@ -12,7 +12,9 @@ import {
   useTable,
   type ColumnFiltersState,
   type ColumnDef,
+  type OnChangeFn,
   type RowData,
+  type RowSelectionState,
 } from "@tanstack/react-table";
 import { features, type DataTableFeatures } from "@/lib/data-table-features";
 import { Input } from "@/components/ui/input";
@@ -29,6 +31,10 @@ interface DataTableProps<TData extends RowData> {
   loading?: boolean;
   addButton?: ReactNode;
   filters?: ReactNode;
+  selectable?: boolean;
+  rowSelection?: RowSelectionState;
+  onRowSelectionChange?: OnChangeFn<RowSelectionState>;
+  getRowId?: (row: TData) => string;
 }
 
 export function StockOpnameTable<TData extends RowData>({
@@ -42,17 +48,53 @@ export function StockOpnameTable<TData extends RowData>({
   loading = false,
   addButton,
   filters,
+  selectable = false,
+  rowSelection,
+  onRowSelectionChange,
+  getRowId,
 }: DataTableProps<TData>) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+
+  const selectionColumn: ColumnDef<DataTableFeatures, TData> = {
+    id: "__select",
+    header: ({ table }) => (
+      <input
+        type="checkbox"
+        aria-label="Pilih semua item di halaman ini"
+        checked={table.getIsAllPageRowsSelected()}
+        onChange={table.getToggleAllPageRowsSelectedHandler()}
+      />
+    ),
+    cell: ({ row }) => (
+      <input
+        type="checkbox"
+        aria-label={`Pilih item ${row.id}`}
+        checked={row.getIsSelected()}
+        onChange={row.getToggleSelectedHandler()}
+      />
+    ),
+    size: 36,
+    enableSorting: false,
+    enableHiding: false,
+  };
+
+  const tableColumns = selectable ? [selectionColumn, ...columns] : columns;
 
   const table = useTable({
     features,
     data,
-    columns,
+    columns: tableColumns,
     onColumnFiltersChange: setColumnFilters,
-    state: {
-      columnFilters,
-    },
+    ...(selectable
+      ? {
+          enableRowSelection: true,
+          getRowId: (row: TData) => getRowId?.(row) ?? String((row as { id?: number }).id ?? ""),
+          state: { columnFilters, rowSelection: rowSelection ?? {} },
+          onRowSelectionChange,
+        }
+      : {
+          state: { columnFilters },
+        }),
     initialState: {
       pagination: {
         pageIndex: 0,
@@ -112,7 +154,7 @@ export function StockOpnameTable<TData extends RowData>({
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={columns.length}
+                  colSpan={tableColumns.length}
                   className="h-24 text-center"
                 >
                   Tidak ada data.
