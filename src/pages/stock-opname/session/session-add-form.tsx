@@ -72,7 +72,7 @@ export default function SessionAddForm({
         <>
           <div className="space-y-2">
             <Label htmlFor="code">Kode</Label>
-            <Input id="code" value={step1.code} onChange={(e) => setStep1({ ...step1, code: e.target.value })} required />
+            <Input id="code" value={step1.code} onChange={(e) => setStep1({ ...step1, code: e.target.value })} maxLength={20} required />
           </div>
 
           <div className="space-y-2">
@@ -89,6 +89,7 @@ export default function SessionAddForm({
               <div key={index} className="flex gap-2">
                 <Input
                   placeholder={`Kode koordinator ${index + 1}`}
+                  maxLength={20}
                   value={coordinator.code}
                   onChange={(e) => {
                     const next = [...step1.coordinators];
