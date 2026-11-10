@@ -33,7 +33,7 @@ export default function ProductAddForm({ onSubmit, initialData, submitLabel = "T
         <Input id="name" name="name" defaultValue={initialData?.name} maxLength={150} required />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="departmentCode">Department Code</Label>
+        <Label htmlFor="departmentCode">Dept</Label>
         <Input id="departmentCode" name="departmentCode" defaultValue={initialData?.department} placeholder="cth: RTD, FROZEN" maxLength={10} required />
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -51,22 +51,20 @@ export default function ProductAddForm({ onSubmit, initialData, submitLabel = "T
         <Input id="perCarton" name="perCarton" type="number" min="0" step="1" defaultValue={initialData?.perCarton ?? 0} />
         <p className="text-muted-foreground text-xs">Isi 0 jika produk tidak dihitung per karton.</p>
       </div>
-      {initialData && (
-        <div className="space-y-2">
-          <Label>Barcode</Label>
-          {barcodes.length === 0 && <p className="text-muted-foreground text-sm">Belum ada barcode.</p>}
-          {barcodes.map((b) => (
-            <div key={b} className="flex items-center justify-between gap-2 rounded-md border px-2 py-1">
-              <span className="truncate text-sm">{b}</span>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setBarcodes(barcodes.filter((x) => x !== b))}>Hapus</Button>
-            </div>
-          ))}
-          <div className="flex gap-2">
-            <Input value={newBarcode} onChange={(e) => setNewBarcode(e.target.value)} placeholder="Scan / ketik barcode" maxLength={15} />
-            <Button type="button" variant="secondary" onClick={() => { const v = newBarcode.trim(); if (v && !barcodes.includes(v)) setBarcodes([...barcodes, v]); setNewBarcode(""); }}>Tambah</Button>
+      <div className="space-y-2">
+        <Label>Barcode</Label>
+        {barcodes.length === 0 && <p className="text-muted-foreground text-sm">Belum ada barcode.</p>}
+        {barcodes.map((b) => (
+          <div key={b} className="flex items-center justify-between gap-2 rounded-md border px-2 py-1">
+            <span className="truncate text-sm">{b}</span>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setBarcodes(barcodes.filter((x) => x !== b))}>Hapus</Button>
           </div>
+        ))}
+        <div className="flex gap-2">
+          <Input value={newBarcode} onChange={(e) => setNewBarcode(e.target.value)} maxLength={15} />
+          <Button type="button" variant="secondary" onClick={() => { const v = newBarcode.trim(); if (v && !barcodes.includes(v)) setBarcodes([...barcodes, v]); setNewBarcode(""); }}>Tambah</Button>
         </div>
-      )}
+      </div>
       <Button type="submit" className="w-full">
         {submitLabel}
       </Button>
