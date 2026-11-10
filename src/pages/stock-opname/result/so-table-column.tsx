@@ -25,8 +25,8 @@ export const createColumns = (onUpdate: (id: number, data: StockOpnameUpdateRequ
     cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
   columnHelper.accessor("effectiveQuantity", {
-    header: "Jumlah Efektif",
-    size: 110,
+    header: "Jumlah",
+    size: 90,
   }),
   columnHelper.accessor("rackName", {
     header: "Rak",
