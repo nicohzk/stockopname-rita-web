@@ -12,6 +12,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
+import { Notice, RetryButton } from "@/components/ui/notice";
+import { errorMessage, refreshWarningMessage } from "@/lib/errors";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
@@ -104,6 +106,7 @@ export default function CoorPage() {
   const [resultTotalItems, setResultTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const [refreshWarning, setRefreshWarning] = useState<string>();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<"COMPLETED" | "CANCELLED">("COMPLETED");
   const [qrOpen, setQrOpen] = useState(false);
@@ -187,14 +190,23 @@ export default function CoorPage() {
     setError(undefined);
     try {
       applyPageData(await fetchPageData());
+      setRefreshWarning(undefined);
     } catch (loadError) {
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : "Gagal memuat data koordinator.",
-      );
+      setError(errorMessage(loadError, "Gagal memuat data koordinator."));
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Runs after a mutation that already succeeded. A failing refresh must never
+  // turn that success into an error: report a stale view instead.
+  const refreshAfterMutation = async () => {
+    try {
+      applyPageData(await fetchPageData());
+      setError(undefined);
+      setRefreshWarning(undefined);
+    } catch (refreshError) {
+      setRefreshWarning(refreshWarningMessage(refreshError));
     }
   };
 
@@ -285,16 +297,18 @@ export default function CoorPage() {
     }
     try {
       await updateCoordinator(id, { status });
-      await loadData();
-      showToast(`Koordinator berhasil ${status === "COMPLETED" ? "diselesaikan" : "dibatalkan"}.`);
     } catch (mutationError) {
       showToast(
-        mutationError instanceof Error
-          ? mutationError.message
-          : "Gagal memperbarui koordinator.",
+        errorMessage(mutationError, "Gagal memperbarui koordinator."),
         "error",
       );
+      return;
     }
+    // Reflect the new status right away so the final actions stop being offered
+    // even when the follow-up refresh fails.
+    setCoordinator((current) => (current ? { ...current, status } : current));
+    showToast(`Koordinator berhasil ${status === "COMPLETED" ? "diselesaikan" : "dibatalkan"}.`);
+    await refreshAfterMutation();
   };
   const handleResultUpdate = async (
     resultId: number,
@@ -302,52 +316,44 @@ export default function CoorPage() {
   ) => {
     try {
       await updateStockOpname(resultId, data);
-      await loadData();
-      clearSelection();
-      setAuditRefresh((value) => value + 1);
-      showToast("Data stock opname berhasil diperbarui.");
     } catch (mutationError) {
       showToast(
-        mutationError instanceof Error
-          ? mutationError.message
-          : "Gagal memperbarui data stock opname.",
+        errorMessage(mutationError, "Gagal memperbarui data stock opname."),
         "error",
       );
       throw mutationError;
     }
+    showToast("Data stock opname berhasil diperbarui.");
+    clearSelection();
+    setAuditRefresh((value) => value + 1);
+    await refreshAfterMutation();
   };
   const handleResultDelete = async (resultId: number) => {
     try {
       await deleteStockOpname(resultId);
-      await loadData();
-      clearSelection();
-      setAuditRefresh((value) => value + 1);
-      showToast("Data stock opname berhasil dihapus.");
     } catch (mutationError) {
       showToast(
-        mutationError instanceof Error
-          ? mutationError.message
-          : "Gagal menghapus data stock opname.",
+        errorMessage(mutationError, "Gagal menghapus data stock opname."),
         "error",
       );
+      return;
     }
+    showToast("Data stock opname berhasil dihapus.");
+    clearSelection();
+    setAuditRefresh((value) => value + 1);
+    await refreshAfterMutation();
   };
   const handleResultCreate = async (data: StockOpnameCreateRequest) => {
     try {
       await createStockOpname(data);
-      await loadData();
-      clearSelection();
-      setAuditRefresh((value) => value + 1);
-      showToast("Item berhasil ditambahkan.");
     } catch (mutationError) {
-      showToast(
-        mutationError instanceof Error
-          ? mutationError.message
-          : "Gagal menambahkan item.",
-        "error",
-      );
+      showToast(errorMessage(mutationError, "Gagal menambahkan item."), "error");
       throw mutationError;
     }
+    showToast("Item berhasil ditambahkan.");
+    clearSelection();
+    setAuditRefresh((value) => value + 1);
+    await refreshAfterMutation();
   };
 
   const handleMoveRequest = (item: { rackId: number; rackName: string; id: number }) => {
@@ -371,12 +377,12 @@ export default function CoorPage() {
       resultIds: moveState.resultIds,
       note,
     });
-    await loadData();
     clearSelection();
     setAuditRefresh((value) => value + 1);
     showToast(
       `${result.data.moved_count} item dipindah${result.data.merged_count ? `, ${result.data.merged_count} digabung` : ""}.`,
     );
+    await refreshAfterMutation();
   };
 
   const handleRackFilter = (value: string) => {
@@ -414,15 +420,15 @@ export default function CoorPage() {
   const handleDeleteRack = async (rakId: number) => {
     try {
       await deleteRack(rakId);
-      await loadData();
-      showToast("Rak berhasil dihapus.");
     } catch (mutationError) {
       showToast(
-        mutationError instanceof Error ? mutationError.message : "Gagal menghapus rak.",
+        errorMessage(mutationError, "Gagal menghapus rak."),
         "error",
       );
       throw mutationError;
     }
+    showToast("Rak berhasil dihapus.");
+    await refreshAfterMutation();
   };
 
   if (!Number.isFinite(id) || !Number.isFinite(session)) {
@@ -440,7 +446,7 @@ export default function CoorPage() {
       </div>
     );
   }
-  if (error || !coordinator)
+  if (!coordinator)
     return (
       <div className="p-4 text-destructive">
         {error ?? "Koordinator tidak ditemukan."}
@@ -560,26 +566,40 @@ export default function CoorPage() {
         factor,
         note,
       });
-      await loadData();
-      clearSelection();
-      setFactorTarget(undefined);
-      setAuditRefresh((value) => value + 1);
       showToast(
         result.updated_count === 0
           ? "Tidak ada perubahan faktor."
           : `${result.updated_count} item berhasil diubah faktornya.`,
       );
     } catch (mutationError) {
-      showToast(
-        mutationError instanceof Error ? mutationError.message : "Gagal mengubah faktor jual.",
-        "error",
-      );
+      showToast(errorMessage(mutationError, "Gagal mengubah faktor jual."), "error");
       throw mutationError;
     }
+    clearSelection();
+    setFactorTarget(undefined);
+    setAuditRefresh((value) => value + 1);
+    await refreshAfterMutation();
   };
 
   return (
     <div className="min-w-0 p-0 sm:p-2">
+      {refreshWarning ? (
+        <Notice
+          message={refreshWarning}
+          action={
+            <RetryButton onRetry={() => void loadData()} retrying={loading} />
+          }
+        />
+      ) : null}
+      {error ? (
+        <Notice
+          tone="error"
+          message={error}
+          action={
+            <RetryButton onRetry={() => void loadData()} retrying={loading} />
+          }
+        />
+      ) : null}
       <div className="mb-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
