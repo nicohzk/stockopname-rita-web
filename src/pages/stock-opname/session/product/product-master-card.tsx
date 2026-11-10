@@ -9,6 +9,8 @@ import type { CreateProductRequest, UpdateProductRequest } from "@/types/product
 import { getColumns } from "./product-table-column";
 import ProductAddButton from "./product-add-btn";
 import { useToast } from "@/components/ui/toast";
+import { Notice, RetryButton } from "@/components/ui/notice";
+import { errorMessage, refreshWarningMessage } from "@/lib/errors";
 
 export default function ProductMasterCard({
   sessionId,
@@ -25,6 +27,7 @@ export default function ProductMasterCard({
   const [searchInput, setSearchInput] = useState("");
   const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState<string>();
+  const [refreshWarning, setRefreshWarning] = useState<string>();
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -39,10 +42,26 @@ export default function ProductMasterCard({
       setPage(result.pagination.page);
       setTotalPages(result.pagination.total_pages || 1);
       setError(undefined);
+      setRefreshWarning(undefined);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Gagal memuat data produk.");
+      setError(errorMessage(loadError, "Gagal memuat data produk."));
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Non-fatal reload used after a mutation that already succeeded: a failing
+  // refresh must not turn that success into an error.
+  const refreshProducts = async () => {
+    try {
+      const result = await getProducts(sessionId, page, 6, search);
+      setProducts(result.data);
+      setPage(result.pagination.page);
+      setTotalPages(result.pagination.total_pages || 1);
+      setError(undefined);
+      setRefreshWarning(undefined);
+    } catch (refreshError) {
+      setRefreshWarning(refreshWarningMessage(refreshError));
     }
   };
   const handlePageChange = (nextPage: number) => {
@@ -87,26 +106,35 @@ export default function ProductMasterCard({
   const handleCreate = async (data: CreateProductRequest) => {
     try {
       await createProduct(sessionId, data);
-      await loadData();
-      onProductsChanged?.();
-      showToast("Produk berhasil ditambahkan.");
-    } catch (mutationError) { showToast(mutationError instanceof Error ? mutationError.message : "Gagal menambahkan produk.", "error"); throw mutationError; }
+    } catch (mutationError) {
+      showToast(errorMessage(mutationError, "Gagal menambahkan produk."), "error");
+      throw mutationError;
+    }
+    showToast("Produk berhasil ditambahkan.");
+    onProductsChanged?.();
+    await refreshProducts();
   };
   const handleDelete = async (id: number) => {
     try {
       await deleteProduct(id, sessionId);
-      await loadData();
-      onProductsChanged?.();
-      showToast("Produk berhasil dihapus.");
-    } catch (mutationError) { showToast(mutationError instanceof Error ? mutationError.message : "Gagal menghapus produk.", "error"); }
+    } catch (mutationError) {
+      showToast(errorMessage(mutationError, "Gagal menghapus produk."), "error");
+      return;
+    }
+    showToast("Produk berhasil dihapus.");
+    onProductsChanged?.();
+    await refreshProducts();
   };
   const handleUpdate = async (id: number, data: UpdateProductRequest) => {
     try {
       await updateProduct(id, sessionId, data);
-      await loadData();
-      onProductsChanged?.();
-      showToast("Produk berhasil diperbarui.");
-    } catch (mutationError) { showToast(mutationError instanceof Error ? mutationError.message : "Gagal memperbarui produk.", "error"); throw mutationError; }
+    } catch (mutationError) {
+      showToast(errorMessage(mutationError, "Gagal memperbarui produk."), "error");
+      throw mutationError;
+    }
+    showToast("Produk berhasil diperbarui.");
+    onProductsChanged?.();
+    await refreshProducts();
   };
 
   return (
@@ -125,6 +153,14 @@ export default function ProductMasterCard({
         )}
       </CardHeader>
       <CardContent>
+        {refreshWarning ? (
+          <Notice
+            message={refreshWarning}
+            action={
+              <RetryButton onRetry={() => void loadData()} retrying={loading} />
+            }
+          />
+        ) : null}
         {loading && !products.length ? (
           <div className="flex h-40 items-center justify-center">
             <LoadingSpinner message="Memuat data produk..." />
