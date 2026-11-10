@@ -11,18 +11,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 export default function ProductTableButton({ product, onDelete, onUpdate }: { product: Product; onDelete: (id: number) => Promise<void>; onUpdate: (id: number, data: UpdateProductRequest) => Promise<void> }) {
   const [open, setOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   const handleSubmit = async (data: UpdateProductRequest) => {
     // Parent sudah toast error + rethrow; di sini cukup tahan dialog tetap terbuka.
     try { await onUpdate(product.id, data); setOpen(false); } catch { /* error sudah ditampilkan parent */ }
-  };
-
-  const handleDelete = async () => {
-    // Parent toast sukses/gagal; tutup dialog setelah selesai apapun hasilnya.
-    if (deleting) return;
-    setDeleting(true);
-    try { await onDelete(product.id); } finally { setDeleting(false); setConfirmOpen(false); }
   };
 
   return (
@@ -54,10 +46,11 @@ export default function ProductTableButton({ product, onDelete, onUpdate }: { pr
         onOpenChange={setConfirmOpen}
         title={`Hapus produk ${product.plu}?`}
         description="Produk dan barcode-nya akan dihapus permanen. Lanjut?"
-        confirmLabel={deleting ? "Menghapus..." : "Ya, hapus"}
+        confirmLabel="Ya, hapus"
+        pendingLabel="Menghapus..."
         cancelLabel="Batal"
         destructive
-        onConfirm={() => void handleDelete()}
+        onConfirm={() => onDelete(product.id)}
       />
     </Dialog>
   );

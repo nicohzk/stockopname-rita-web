@@ -18,7 +18,6 @@ import type { StockOpname } from "@/types/stock-opname";
 export default function StockOpnameTableButton({ item, onUpdate, onDelete, onMove, onFactor, readOnly = false }: { item: StockOpname; onUpdate: (id: number, quantity: number) => Promise<void>; onDelete: (id: number) => Promise<void>; onMove?: (item: StockOpname) => void; onFactor?: (item: StockOpname) => void; readOnly?: boolean }) {
   const [open, setOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string>();
 
@@ -39,13 +38,6 @@ export default function StockOpnameTableButton({ item, onUpdate, onDelete, onMov
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleDelete = async () => {
-    // Parent toast sukses/gagal; tutup dialog setelah selesai apapun hasilnya.
-    if (deleting) return;
-    setDeleting(true);
-    try { await onDelete(item.id); } finally { setDeleting(false); setConfirmOpen(false); }
   };
 
   return (
@@ -83,10 +75,11 @@ export default function StockOpnameTableButton({ item, onUpdate, onDelete, onMov
         onOpenChange={setConfirmOpen}
         title={`Hapus item ${item.barcode}?`}
         description="Hasil hitung item ini akan dihapus permanen. Lanjut?"
-        confirmLabel={deleting ? "Menghapus..." : "Ya, hapus"}
+        confirmLabel="Ya, hapus"
+        pendingLabel="Menghapus..."
         cancelLabel="Batal"
         destructive
-        onConfirm={() => void handleDelete()}
+        onConfirm={() => onDelete(item.id)}
       />
     </Dialog>
   );

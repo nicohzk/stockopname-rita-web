@@ -93,9 +93,9 @@ export function ProductClearCard({ sessionId, onCleared }: { sessionId: number; 
       onCleared();
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Gagal menghapus master data.", "error");
+      throw err; // dialog tetap terbuka supaya bisa dicoba lagi
     } finally {
       setLoading(false);
-      setOpen(false);
     }
   };
 
@@ -113,8 +113,9 @@ export function ProductClearCard({ sessionId, onCleared }: { sessionId: number; 
           title="Hapus seluruh master produk sesi ini?"
           description="Produk dan barcode sesi ini akan dihapus permanen. Riwayat SO tidak berubah. Lanjut?"
           confirmLabel="Ya, hapus"
+          pendingLabel="Menghapus..."
           destructive
-          onConfirm={() => void handleConfirm()}
+          onConfirm={handleConfirm}
         />
       </CardContent>
     </Card>
