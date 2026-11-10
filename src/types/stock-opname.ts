@@ -18,7 +18,7 @@ export type StockOpname = {
 export type StockOpnameUpdateRequest = { quantity: number; note?: string };
 export type StockOpnameCreateRequest = { quantity: number; barcode?: string; plu?: string; rackId: number; note?: string };
 export type StockOpnameMoveRequest = { sourceRakId: number; targetRakId: number; resultIds?: number[]; note?: string };
-export type StockOpnameMoveResponse = { moved_count: number; merged_count: number };
+export type StockOpnameMoveResponse = { moved_count: number; merged_count: number; reopened_rack_id?: number };
 
 export type QtyFactorFilter = {
   search?: string;

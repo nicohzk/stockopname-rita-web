@@ -67,7 +67,7 @@ export default function StockOpnameMoveDialog({
         <DialogHeader>
           <DialogTitle>Pindahkan Hasil SO</DialogTitle>
           <DialogDescription>
-            Riwayat upload tidak berubah. Laporan sesi/koordinator memakai data terkini.
+            Laporan upload memakai data terkini. Jika rak asal menjadi kosong, upload-nya dibuka dan rak bisa diupload ulang.
             Perubahan dicatat di audit.
           </DialogDescription>
         </DialogHeader>
@@ -84,7 +84,7 @@ export default function StockOpnameMoveDialog({
 
           {sourceRack?.uploadedAt ? (
             <p className="text-sm text-amber-700 dark:text-amber-300">
-              Item tetap tercatat di riwayat upload rak asal, meskipun sudah dipindah.
+              Jika semua item dipindah, upload rak asal akan dibuka dan rak bisa diupload ulang.
             </p>
           ) : null}
 
@@ -109,7 +109,7 @@ export default function StockOpnameMoveDialog({
 
           {targetRack?.uploadedAt ? (
             <p className="text-sm text-amber-700 dark:text-amber-300">
-              Item akan masuk ke data terkini rak tujuan, tetapi tidak akan muncul di riwayat upload rak tujuan.
+              Item akan muncul di laporan upload rak tujuan karena laporan memakai data terkini.
             </p>
           ) : null}
 

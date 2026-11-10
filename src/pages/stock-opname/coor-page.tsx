@@ -467,7 +467,9 @@ export default function CoorPage() {
     clearSelection();
     setAuditRefresh((value) => value + 1);
     showToast(
-      `${result.data.moved_count} item dipindah${result.data.merged_count ? `, ${result.data.merged_count} digabung` : ""}.`,
+      `${result.data.moved_count} item dipindah${result.data.merged_count ? `, ${result.data.merged_count} digabung` : ""}.${
+        result.data.reopened_rack_id ? " Rak sumber kosong; upload dibuka dan bisa diupload ulang." : ""
+      }`,
     );
     void refreshAfterMutation();
   };
@@ -809,8 +811,8 @@ export default function CoorPage() {
       </div>
       <Card className="my-5">
         <CardHeader>
-          <CardTitle>Riwayat Upload (Histori)</CardTitle>
-          <CardDescription>Histori submit asli; koreksi admin tidak mengubah data ini</CardDescription>
+          <CardTitle>Riwayat Upload</CardTitle>
+          <CardDescription>Laporan upload memakai hasil terkini; koreksi admin ikut tercermin.</CardDescription>
           <CardAction>
             <Button
               variant="outline"
