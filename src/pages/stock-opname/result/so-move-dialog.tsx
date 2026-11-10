@@ -114,7 +114,7 @@ export default function StockOpnameMoveDialog({
           ) : null}
 
           <p className="text-sm text-muted-foreground">
-            PLU yang sama di rak tujuan akan digabung qty-nya.
+            PLU yang sama di rak tujuan akan digabung qty-nya. Hasil dengan faktor qty berbeda tidak bisa digabung; samakan dulu faktornya.
           </p>
 
           <div className="space-y-2">
