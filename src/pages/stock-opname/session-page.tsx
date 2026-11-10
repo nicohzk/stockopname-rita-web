@@ -513,14 +513,6 @@ export default function SessionPage() {
     });
   };
 
-  const openSessionFactor = () => {
-    setFactorTarget({
-      scope: "session",
-      label: session?.code ?? "Sesi",
-      itemCount: progress[0]?.total_items ?? 0,
-    });
-  };
-
   const openSelectedFactor = () => {
     setFactorTarget({
       scope: "items",
@@ -537,13 +529,21 @@ export default function SessionPage() {
     setSelectionMode("filter");
   };
 
-  const openFilterFactor = () => {
-    setFactorTarget({
-      scope: "filter",
-      label: "Semua hasil filter",
-      itemCount: resultTotalItems,
-      mixed: true,
-    });
+  const openBulkFactor = () => {
+    setFactorTarget(
+      filterActive
+        ? {
+            scope: "filter",
+            label: "Semua hasil filter",
+            itemCount: resultTotalItems,
+            mixed: true,
+          }
+        : {
+            scope: "session",
+            label: session?.code ?? "Sesi",
+            itemCount: resultTotalItems,
+          },
+    );
   };
 
   const openSelectedMove = () => {
@@ -672,20 +672,6 @@ export default function SessionPage() {
           <div className="flex flex-wrap gap-2 sm:gap-5">
             <div className="flex flex-wrap gap-2">
               <Button
-                variant="outline"
-                onClick={openSessionFactor}
-                disabled={(rack?.total_items ?? 0) === 0 || (rack?.total_items ?? 0) > 1000}
-                title={
-                  (rack?.total_items ?? 0) === 0
-                    ? "Belum ada hasil stock opname."
-                    : (rack?.total_items ?? 0) > 1000
-                      ? "Lebih dari 1000 hasil; pecah per koordinator/rak."
-                      : undefined
-                }
-              >
-                Faktor Qty
-              </Button>
-              <Button
                 variant="default"
                 onClick={() => { setPendingAction("COMPLETED"); setConfirmOpen(true); }}
                 disabled={session.status !== "IN_PROGRESS" || productCount === 0}
@@ -809,8 +795,9 @@ export default function SessionPage() {
         <CardContent>
           <ResultSelectionBar
             mode={selectionMode}
+            filtered={filterActive}
             count={selectionMode === "filter" ? resultTotalItems : selectedCount}
-            onFactor={selectionMode === "filter" ? openFilterFactor : openSelectedFactor}
+            onFactor={selectionMode === "filter" ? openBulkFactor : openSelectedFactor}
             onMove={selectionMode === "filter" ? undefined : openSelectedMove}
             moveDisabledReason={selectionMode === "filter" ? undefined : moveDisabledReason}
             onClear={clearSelection}
@@ -866,19 +853,21 @@ export default function SessionPage() {
                     </option>
                   ))}
                 </select>
-                {filterActive ? (
+                {resultTotalItems > 0 ? (
                   <Button
                     variant={selectionMode === "filter" ? "default" : "outline"}
                     size="sm"
                     onClick={activateFilterMode}
-                    disabled={selectionMode === "filter" || resultTotalItems === 0 || resultTotalItems > 1000}
+                    disabled={selectionMode === "filter" || resultTotalItems > 1000}
                     title={
                       resultTotalItems > 1000
-                        ? "Persempit filter; maksimal 1000 baris."
+                        ? filterActive
+                          ? "Persempit filter; maksimal 1000 baris."
+                          : "Maksimal 1000 baris; persempit lewat filter."
                         : undefined
                     }
                   >
-                    Pilih semua {resultTotalItems} hasil filter
+                    Pilih semua {resultTotalItems} hasil{filterActive ? " filter" : ""}
                   </Button>
                 ) : null}
               </div>
