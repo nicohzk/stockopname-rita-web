@@ -17,9 +17,7 @@ export default function RackTableButton({
   readOnly?: boolean;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
-
-  if (readOnly && !onFactor) return null;
-  if (!onMove && !onFactor && item.uploadedAt) return null;
+  const finalReason = "Sesi atau koordinator sudah final.";
 
   return (
     <div className="flex gap-1">
@@ -31,7 +29,7 @@ export default function RackTableButton({
           disabled={item.itemCount === 0 || item.itemCount > 1000}
           title={
             item.itemCount === 0
-              ? "Rak belum punya hasil."
+              ? "Belum ada hasil."
               : item.itemCount > 1000
                 ? "Lebih dari 1000 hasil; pecah per item."
                 : undefined
@@ -40,29 +38,51 @@ export default function RackTableButton({
           Faktor Qty
         </Button>
       ) : null}
-      {!readOnly && onMove ? (
-        <Button variant="outline" size="sm" onClick={() => onMove(item)}>
+      {onMove ? (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onMove(item)}
+          disabled={readOnly || item.itemCount === 0}
+          title={
+            readOnly
+              ? finalReason
+              : item.itemCount === 0
+                ? "Belum ada hasil untuk dipindah."
+                : undefined
+          }
+        >
           Pindahkan
         </Button>
       ) : null}
-      {!readOnly && !item.uploadedAt ? (
-        <>
-          <Button variant="destructive" size="sm" onClick={() => setConfirmOpen(true)}>
-            Hapus
-          </Button>
-          <AlertDialog
-            open={confirmOpen}
-            onOpenChange={setConfirmOpen}
-            title={`Hapus ${item.name}?`}
-            description="Rak ini belum diupload dan tidak berisi item. Tindakan ini tidak dapat dibatalkan."
-            confirmLabel="Ya, hapus"
-            pendingLabel="Menghapus..."
-            cancelLabel="Batal"
-            destructive
-            onConfirm={() => onDelete(item.id)}
-          />
-        </>
-      ) : null}
+      <Button
+        variant="destructive"
+        size="sm"
+        onClick={() => setConfirmOpen(true)}
+        disabled={readOnly || Boolean(item.uploadedAt) || item.itemCount > 0}
+        title={
+          readOnly
+            ? finalReason
+            : item.uploadedAt
+              ? "Sudah upload."
+              : item.itemCount > 0
+                ? `Rak masih berisi ${item.itemCount} item.`
+                : undefined
+        }
+      >
+        Hapus
+      </Button>
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={`Hapus ${item.name}?`}
+        description="Rak ini belum diupload dan tidak berisi item. Tindakan ini tidak dapat dibatalkan."
+        confirmLabel="Ya, hapus"
+        pendingLabel="Menghapus..."
+        cancelLabel="Batal"
+        destructive
+        onConfirm={() => onDelete(item.id)}
+      />
     </div>
   );
 }

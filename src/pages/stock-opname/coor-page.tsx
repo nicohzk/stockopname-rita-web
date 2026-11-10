@@ -835,7 +835,7 @@ export default function CoorPage() {
       <Card className="my-5">
         <CardHeader>
           <CardTitle>Daftar Rak</CardTitle>
-          <CardDescription>Rak yang belum diupload masih bisa dihapus</CardDescription>
+          <CardDescription>Hapus hanya untuk rak kosong yang belum diupload.</CardDescription>
           <CardAction>
             <RackSeatMap racks={racks} />
           </CardAction>

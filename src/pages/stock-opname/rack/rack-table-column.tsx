@@ -20,11 +20,11 @@ export const createColumns = (
     }),
     columnHelper.display({
       id: "contents",
-      header: "Isi Rak",
+      header: "Hasil SO",
       size: 110,
       cell: ({ row }) => (
         <span className={row.original.isEmpty ? "text-muted-foreground" : ""}>
-          {row.original.isEmpty ? "Kosong" : `${row.original.itemCount} item`}
+          {row.original.isEmpty ? "Belum ada" : `${row.original.itemCount} item`}
         </span>
       ),
     }),
@@ -32,7 +32,7 @@ export const createColumns = (
       id: "upload",
       header: "Upload",
       size: 110,
-      cell: ({ row }) => (row.original.uploadedAt ? "Terupload" : "Belum"),
+      cell: ({ row }) => (row.original.uploadedAt ? "Sudah" : "Belum"),
     }),
     columnHelper.display({
       id: "actions",
