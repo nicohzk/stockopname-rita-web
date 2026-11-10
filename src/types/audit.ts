@@ -15,7 +15,9 @@ export type AuditData = {
   quantity: number;
   buy_price: number;
   sell_price: number;
+  qty_factor?: number;
   sell_factor?: number;
+  effective_quantity?: number;
 };
 
 export type AuditEntry = {

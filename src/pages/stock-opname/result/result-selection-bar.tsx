@@ -27,7 +27,7 @@ export default function ResultSelectionBar({
       </span>
       <div className="ml-auto flex flex-wrap gap-2">
         <Button size="sm" onClick={onFactor}>
-          Faktor Jual
+          Faktor Qty
         </Button>
         {mode === "manual" && onMove ? (
           <Button

@@ -37,7 +37,7 @@ export default function RackTableButton({
                 : undefined
           }
         >
-          Faktor
+          Faktor Qty
         </Button>
       ) : null}
       {!readOnly && onMove ? (

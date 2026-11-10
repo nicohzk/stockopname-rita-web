@@ -27,17 +27,17 @@ import {
   deleteStockOpname,
   getStockOpnames,
   moveStockOpname,
-  setSellFactor,
+  setQtyFactor,
   updateStockOpname,
 } from "@/services/stock-opname.service";
 import type {
   ResultSelectionItem,
-  SellFactor,
-  SellFactorScope,
+  QtyFactor,
+  QtyFactorScope,
   SelectionMode,
 } from "@/types/stock-opname";
 import ResultSelectionBar from "./result/result-selection-bar";
-import SellFactorDialog from "./result/sell-factor-dialog";
+import QtyFactorDialog from "./result/qty-factor-dialog";
 import SellSummaryCard from "./result/sell-summary-card";
 import StockOpnameAddItemButton from "./result/so-add-item-btn";
 import StockOpnameMoveDialog from "./result/so-move-dialog";
@@ -129,11 +129,11 @@ export default function SessionPage() {
   const [selectedItems, setSelectedItems] = useState<Map<number, ResultSelectionItem>>(new Map());
   const [selectionMode, setSelectionMode] = useState<SelectionMode>("manual");
   const [factorTarget, setFactorTarget] = useState<{
-    scope: SellFactorScope;
+    scope: QtyFactorScope;
     scopeId?: number;
     label: string;
     itemCount: number;
-    currentFactor?: SellFactor;
+    currentFactor?: QtyFactor;
     mixed?: boolean;
     resultIds?: number[];
   }>();
@@ -273,7 +273,7 @@ export default function SessionPage() {
             id: item.id,
             rackId: item.rackId,
             coordinatorId: item.coordinatorId,
-            sellFactor: item.sellFactor,
+            qtyFactor: item.qtyFactor,
           });
         } else {
           updated.delete(item.id);
@@ -483,7 +483,7 @@ export default function SessionPage() {
   const selectedRack = selectedRackId !== undefined
     ? racks.find((rack) => rack.id === selectedRackId)
     : undefined;
-  const mixedSelectedFactor = new Set(selectedItemsList.map((item) => item.sellFactor)).size > 1;
+  const mixedSelectedFactor = new Set(selectedItemsList.map((item) => item.qtyFactor)).size > 1;
   const sourceCoordinatorStatus = selectedRack
     ? coordinatorStatusById.get(selectedRack.coordinatorId)
     : undefined;
@@ -507,7 +507,7 @@ export default function SessionPage() {
       scopeId: item.id,
       label: item.name,
       itemCount: 1,
-      currentFactor: item.sellFactor,
+      currentFactor: item.qtyFactor,
     });
   };
 
@@ -554,10 +554,10 @@ export default function SessionPage() {
     });
   };
 
-  const handleFactorSubmit = async (factor: SellFactor, note: string) => {
+  const handleFactorSubmit = async (factor: QtyFactor, note: string) => {
     if (!factorTarget) return;
     try {
-      const result = await setSellFactor(id, {
+      const result = await setQtyFactor(id, {
         scope: factorTarget.scope,
         scopeId: factorTarget.scopeId,
         resultIds: factorTarget.resultIds,
@@ -568,7 +568,7 @@ export default function SessionPage() {
               rakId: filterRackId ? Number(filterRackId) : undefined,
             }
           : undefined,
-        factor,
+        qtyFactor: factor,
         note,
       });
       showToast(
@@ -577,7 +577,7 @@ export default function SessionPage() {
           : `${result.updated_count} item berhasil diubah faktornya.`,
       );
     } catch (mutationError) {
-      showToast(errorMessage(mutationError, "Gagal mengubah faktor jual."), "error");
+      showToast(errorMessage(mutationError, "Gagal mengubah faktor qty."), "error");
       throw mutationError;
     }
     clearSelection();
@@ -681,7 +681,7 @@ export default function SessionPage() {
                       : undefined
                 }
               >
-                Faktor Jual
+                Faktor Qty
               </Button>
               <Button
                 variant="default"
@@ -956,7 +956,7 @@ export default function SessionPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <SellFactorDialog
+      <QtyFactorDialog
         key={`${factorTarget?.scope ?? "closed"}-${factorTarget?.scopeId ?? ""}-${factorTarget?.itemCount ?? 0}`}
         open={Boolean(factorTarget)}
         onOpenChange={(open) => { if (!open) setFactorTarget(undefined); }}

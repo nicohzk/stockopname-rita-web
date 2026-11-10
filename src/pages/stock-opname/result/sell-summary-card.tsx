@@ -37,8 +37,8 @@ export default function SellSummaryCard({ sessionId, refreshKey = 0 }: { session
   return (
     <Card className="my-5">
       <CardHeader>
-        <CardTitle>Rekapan Harga Jual</CardTitle>
-        <CardDescription>Total harga jual asli dan efektif setelah faktor.</CardDescription>
+        <CardTitle>Rekapan Nilai Jual</CardTitle>
+        <CardDescription>Total nilai jual asli dan efektif setelah faktor qty.</CardDescription>
         <div className="pt-2">
           <select
             aria-label="Grouping rekapan"
@@ -65,7 +65,7 @@ export default function SellSummaryCard({ sessionId, refreshKey = 0 }: { session
               <TableRow>
                 <TableHead>Group</TableHead>
                 <TableHead className="text-right">Item</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
+                <TableHead className="text-right">Qty Efektif</TableHead>
                 <TableHead className="text-right">Total Jual Asli</TableHead>
                 <TableHead className="text-right">Total Jual Efektif</TableHead>
               </TableRow>

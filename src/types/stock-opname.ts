@@ -1,4 +1,4 @@
-export type SellFactor = -1 | 0 | 1;
+export type QtyFactor = -1 | 0 | 1;
 
 export type StockOpname = {
   id: number;
@@ -6,7 +6,8 @@ export type StockOpname = {
   plu: string;
   name: string;
   quantity: number;
-  sellFactor: SellFactor;
+  effectiveQuantity: number;
+  qtyFactor: QtyFactor;
   updatedAt: string;
   rackId: number;
   rackName: string;
@@ -19,24 +20,24 @@ export type StockOpnameCreateRequest = { quantity: number; barcode?: string; plu
 export type StockOpnameMoveRequest = { sourceRakId: number; targetRakId: number; resultIds?: number[]; note?: string };
 export type StockOpnameMoveResponse = { moved_count: number; merged_count: number };
 
-export type SellFactorFilter = {
+export type QtyFactorFilter = {
   search?: string;
   coordinatorId?: number;
   rakId?: number;
 };
 
-export type SellFactorScope = "session" | "coordinator" | "rack" | "item" | "items" | "filter";
+export type QtyFactorScope = "session" | "coordinator" | "rack" | "item" | "items" | "filter";
 
-export type SetSellFactorRequest = {
-  scope: SellFactorScope;
+export type SetQtyFactorRequest = {
+  scope: QtyFactorScope;
   scopeId?: number;
   resultIds?: number[];
-  filter?: SellFactorFilter;
-  factor: SellFactor;
+  filter?: QtyFactorFilter;
+  qtyFactor: QtyFactor;
   note?: string;
 };
 
-export type SetSellFactorResponse = {
+export type SetQtyFactorResponse = {
   updated_count: number;
   batch_id: string;
 };
@@ -55,7 +56,7 @@ export type SellSummaryResponse = {
   groups: SellSummaryGroup[];
 };
 
-export type ResultSelectionItem = Pick<StockOpname, "id" | "rackId" | "coordinatorId" | "sellFactor">;
+export type ResultSelectionItem = Pick<StockOpname, "id" | "rackId" | "coordinatorId" | "qtyFactor">;
 
 export type SelectionMode = "manual" | "filter";
 

@@ -37,17 +37,17 @@ import {
   deleteStockOpname,
   getStockOpnames,
   moveStockOpname,
-  setSellFactor,
+  setQtyFactor,
   updateStockOpname,
 } from "@/services/stock-opname.service";
 import type {
   ResultSelectionItem,
-  SellFactor,
-  SellFactorScope,
+  QtyFactor,
+  QtyFactorScope,
   SelectionMode,
 } from "@/types/stock-opname";
 import ResultSelectionBar from "./result/result-selection-bar";
-import SellFactorDialog from "./result/sell-factor-dialog";
+import QtyFactorDialog from "./result/qty-factor-dialog";
 import StockOpnameAddItemButton from "./result/so-add-item-btn";
 import StockOpnameMoveDialog from "./result/so-move-dialog";
 import AuditTimeline from "./audit/audit-timeline";
@@ -140,11 +140,11 @@ export default function CoorPage() {
   const [selectedItems, setSelectedItems] = useState<Map<number, ResultSelectionItem>>(new Map());
   const [selectionMode, setSelectionMode] = useState<SelectionMode>("manual");
   const [factorTarget, setFactorTarget] = useState<{
-    scope: SellFactorScope;
+    scope: QtyFactorScope;
     scopeId?: number;
     label: string;
     itemCount: number;
-    currentFactor?: SellFactor;
+    currentFactor?: QtyFactor;
     mixed?: boolean;
     resultIds?: number[];
   }>();
@@ -328,7 +328,7 @@ export default function CoorPage() {
             id: item.id,
             rackId: item.rackId,
             coordinatorId: item.coordinatorId,
-            sellFactor: item.sellFactor,
+            qtyFactor: item.qtyFactor,
           });
         } else {
           updated.delete(item.id);
@@ -565,7 +565,7 @@ export default function CoorPage() {
   const selectedRack = selectedRackId !== undefined
     ? racks.find((item) => item.id === selectedRackId)
     : undefined;
-  const mixedSelectedFactor = new Set(selectedItemsList.map((item) => item.sellFactor)).size > 1;
+  const mixedSelectedFactor = new Set(selectedItemsList.map((item) => item.qtyFactor)).size > 1;
   const moveDisabledReason = selectedCount === 0
     ? "Pilih item terlebih dahulu."
     : selectedRackId === undefined
@@ -577,13 +577,13 @@ export default function CoorPage() {
           : undefined;
   const filterActive = resultSearch.trim() !== "" || filterRackId !== "";
 
-  const openItemFactor = (item: { id: number; name: string; sellFactor: SellFactor }) => {
+  const openItemFactor = (item: { id: number; name: string; qtyFactor: QtyFactor }) => {
     setFactorTarget({
       scope: "item",
       scopeId: item.id,
       label: item.name,
       itemCount: 1,
-      currentFactor: item.sellFactor,
+      currentFactor: item.qtyFactor,
     });
   };
 
@@ -640,10 +640,10 @@ export default function CoorPage() {
     });
   };
 
-  const handleFactorSubmit = async (factor: SellFactor, note: string) => {
+  const handleFactorSubmit = async (factor: QtyFactor, note: string) => {
     if (!factorTarget) return;
     try {
-      const result = await setSellFactor(session, {
+      const result = await setQtyFactor(session, {
         scope: factorTarget.scope,
         scopeId: factorTarget.scopeId,
         resultIds: factorTarget.resultIds,
@@ -654,7 +654,7 @@ export default function CoorPage() {
               rakId: filterRackId ? Number(filterRackId) : undefined,
             }
           : undefined,
-        factor,
+        qtyFactor: factor,
         note,
       });
       showToast(
@@ -663,7 +663,7 @@ export default function CoorPage() {
           : `${result.updated_count} item berhasil diubah faktornya.`,
       );
     } catch (mutationError) {
-      showToast(errorMessage(mutationError, "Gagal mengubah faktor jual."), "error");
+      showToast(errorMessage(mutationError, "Gagal mengubah faktor qty."), "error");
       throw mutationError;
     }
     clearSelection();
@@ -738,7 +738,7 @@ export default function CoorPage() {
                       : undefined
                 }
               >
-                Faktor Jual
+                Faktor Qty
               </Button>
               <Button
                 variant="default"
@@ -980,7 +980,7 @@ export default function CoorPage() {
         open={qrOpen}
         onClose={() => setQrOpen(false)}
       />
-      <SellFactorDialog
+      <QtyFactorDialog
         key={`${factorTarget?.scope ?? "closed"}-${factorTarget?.scopeId ?? ""}-${factorTarget?.itemCount ?? 0}`}
         open={Boolean(factorTarget)}
         onOpenChange={(open) => { if (!open) setFactorTarget(undefined); }}

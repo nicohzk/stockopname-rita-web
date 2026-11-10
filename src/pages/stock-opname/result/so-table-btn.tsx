@@ -52,7 +52,7 @@ export default function StockOpnameTableButton({ item, onUpdate, onDelete, onMov
         }
       />
       <DropdownMenuContent align="end">
-        {onFactor ? <DropdownMenuItem onClick={() => onFactor(item)}>Faktor Jual</DropdownMenuItem> : null}
+        {onFactor ? <DropdownMenuItem onClick={() => onFactor(item)}>Faktor Qty</DropdownMenuItem> : null}
         {!readOnly ? (
           <>
             <DropdownMenuItem onClick={() => { setValidationError(undefined); setOpen(true); }}>Edit</DropdownMenuItem>
@@ -66,7 +66,7 @@ export default function StockOpnameTableButton({ item, onUpdate, onDelete, onMov
       <DialogContent>
         <DialogHeader><DialogTitle>Edit Stock Opname</DialogTitle></DialogHeader>
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <div className="space-y-2"><Label htmlFor={`quantity-${item.id}`}>Quantity</Label><Input id={`quantity-${item.id}`} name="quantity" type="number" step="0.01" min="0" required defaultValue={item.quantity} />{validationError ? <p className="text-sm text-destructive">{validationError}</p> : null}</div>
+          <div className="space-y-2"><Label htmlFor={`quantity-${item.id}`}>Jumlah hitung (sebelum faktor)</Label><Input id={`quantity-${item.id}`} name="quantity" type="number" step="0.01" min="0" required defaultValue={item.quantity} />{validationError ? <p className="text-sm text-destructive">{validationError}</p> : null}</div>
           <Button type="submit" className="w-full" disabled={submitting}>{submitting ? "Menyimpan..." : "Update Stock Opname"}</Button>
         </form>
       </DialogContent>

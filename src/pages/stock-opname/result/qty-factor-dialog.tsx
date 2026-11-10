@@ -3,23 +3,29 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { SellFactor, SellFactorScope } from "@/types/stock-opname";
+import type { QtyFactor, QtyFactorScope } from "@/types/stock-opname";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  scope: SellFactorScope;
+  scope: QtyFactorScope;
   label: string;
   itemCount: number;
-  currentFactor?: SellFactor;
+  currentFactor?: QtyFactor;
   mixed?: boolean;
-  onSubmit: (factor: SellFactor, note: string) => Promise<void>;
+  onSubmit: (factor: QtyFactor, note: string) => Promise<void>;
   disabled?: boolean;
 };
 
-const factors: SellFactor[] = [1, 0, -1];
+const factors: QtyFactor[] = [1, 0, -1];
 
-export default function SellFactorDialog({
+function factorLabel(value: QtyFactor) {
+  if (value === -1) return "-1 Retur";
+  if (value === 0) return "0 Void";
+  return "1 Normal";
+}
+
+export default function QtyFactorDialog({
   open,
   onOpenChange,
   scope,
@@ -30,7 +36,7 @@ export default function SellFactorDialog({
   onSubmit,
   disabled = false,
 }: Props) {
-  const [factor, setFactor] = useState<SellFactor>(currentFactor ?? 1);
+  const [factor, setFactor] = useState<QtyFactor>(currentFactor ?? 1);
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
@@ -43,7 +49,7 @@ export default function SellFactorDialog({
       await onSubmit(factor, note.trim());
       onOpenChange(false);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Gagal mengubah faktor jual.");
+      setError(submitError instanceof Error ? submitError.message : "Gagal mengubah faktor qty.");
     } finally {
       setSubmitting(false);
     }
@@ -53,9 +59,9 @@ export default function SellFactorDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Faktor Jual</DialogTitle>
+          <DialogTitle>Faktor Qty</DialogTitle>
           <DialogDescription>
-            {label}. Harga jual efektif = harga jual × faktor.
+            {label}. Qty efektif = qty × faktor. Faktor -1 retur, 0 void, 1 normal.
           </DialogDescription>
         </DialogHeader>
 
@@ -72,7 +78,7 @@ export default function SellFactorDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Faktor</Label>
+            <Label>Faktor Qty</Label>
             <div className="grid grid-cols-3 gap-2">
               {factors.map((value) => (
                 <Button
@@ -82,16 +88,16 @@ export default function SellFactorDialog({
                   onClick={() => setFactor(value)}
                   disabled={submitting}
                 >
-                  {value}
+                  {factorLabel(value)}
                 </Button>
               ))}
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="sell-factor-note">Catatan (opsional)</Label>
+            <Label htmlFor="qty-factor-note">Catatan (opsional)</Label>
             <Textarea
-              id="sell-factor-note"
+              id="qty-factor-note"
               value={note}
               onChange={(event) => setNote(event.target.value)}
               placeholder="Contoh: koreksi item rusak"

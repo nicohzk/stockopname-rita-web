@@ -24,22 +24,17 @@ export const createColumns = (onUpdate: (id: number, data: StockOpnameUpdateRequ
     size: 150,
     cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
-  columnHelper.accessor("quantity", {
-    header: "Jumlah",
-    size: 80,
+  columnHelper.accessor("effectiveQuantity", {
+    header: "Jumlah Efektif",
+    size: 110,
   }),
   columnHelper.accessor("rackName", {
     header: "Rak",
-    size: 80    ,
+    size: 80,
   }),
   columnHelper.accessor("coordinator", {
     header: "Koordinator",
     size: 80,
-  }),
-  columnHelper.accessor("sellFactor", {
-    header: "Faktor",
-    size: 60,
-    cell: (info) => <span>× {info.getValue()}</span>,
   }),
   columnHelper.accessor("updatedAt", {
     header: "Tanggal Update",

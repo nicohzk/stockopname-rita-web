@@ -30,15 +30,20 @@ function rackLabel(entry: AuditEntry) {
 }
 
 function qtyLabel(entry: AuditEntry) {
-  const before = entry.before?.quantity;
-  const after = entry.after?.quantity;
+  const before = effectiveQty(entry.before);
+  const after = effectiveQty(entry.after);
   if (entry.action === "CREATE") return after ?? "-";
   if (entry.action === "DELETE") return before ?? "-";
   return `${before ?? "-"} → ${after ?? "-"}`;
 }
 
 function factorValue(data: AuditData | null | undefined): number {
-  return data?.sell_factor ?? 1;
+  return data?.qty_factor ?? data?.sell_factor ?? 1;
+}
+
+function effectiveQty(data: AuditData | null | undefined): number | undefined {
+  if (!data) return undefined;
+  return data.effective_quantity ?? data.quantity * factorValue(data);
 }
 
 function factorLabel(entry: AuditEntry) {
@@ -61,7 +66,7 @@ function AuditRow({ entry }: { entry: AuditEntry }) {
       <span className="min-w-0 flex-1 truncate text-sm">{product?.name ?? "-"}</span>
       <span className="w-36 shrink-0 truncate text-sm">{rackLabel(entry)}</span>
       <span className="w-28 shrink-0 text-sm">{qtyLabel(entry)}</span>
-      <span className="w-24 shrink-0 text-sm">Faktor {factorLabel(entry)}</span>
+      <span className="w-24 shrink-0 text-sm">Faktor Qty {factorLabel(entry)}</span>
       <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{entry.note || "-"}</span>
     </div>
   );
