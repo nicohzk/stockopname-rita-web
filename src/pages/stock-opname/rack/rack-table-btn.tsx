@@ -17,20 +17,6 @@ export default function RackTableButton({
   readOnly?: boolean;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-
-  const handleDelete = async () => {
-    if (deleting) return;
-    setDeleting(true);
-    try {
-      await onDelete(item.id);
-    } catch {
-      // Parent sudah toast error; dialog tetap ditutup.
-    } finally {
-      setDeleting(false);
-      setConfirmOpen(false);
-    }
-  };
 
   if (readOnly && !onFactor) return null;
   if (!onMove && !onFactor && item.uploadedAt) return null;
@@ -69,10 +55,11 @@ export default function RackTableButton({
             onOpenChange={setConfirmOpen}
             title={`Hapus ${item.name}?`}
             description="Rak ini belum diupload dan tidak berisi item. Tindakan ini tidak dapat dibatalkan."
-            confirmLabel={deleting ? "Menghapus..." : "Ya, hapus"}
+            confirmLabel="Ya, hapus"
+            pendingLabel="Menghapus..."
             cancelLabel="Batal"
             destructive
-            onConfirm={() => void handleDelete()}
+            onConfirm={() => onDelete(item.id)}
           />
         </>
       ) : null}

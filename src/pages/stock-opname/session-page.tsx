@@ -306,13 +306,13 @@ export default function SessionPage() {
       await updateSession(id, { status });
     } catch (mutationError) {
       showToast(errorMessage(mutationError, "Gagal memperbarui sesi."), "error");
-      return;
+      throw mutationError;
     }
     // Reflect the new status right away so the final actions stop being offered
     // even when the follow-up refresh fails.
     setSession((current) => (current ? { ...current, status } : current));
     showToast(`Sesi berhasil ${status === "COMPLETED" ? "diselesaikan" : "dibatalkan"}.`);
-    await refreshAfterMutation();
+    void refreshAfterMutation();
   };
   const handleResultUpdate = async (
     resultId: number,
@@ -331,7 +331,7 @@ export default function SessionPage() {
     clearSelection();
     setAuditRefresh((value) => value + 1);
     setSummaryRefresh((value) => value + 1);
-    await refreshAfterMutation();
+    void refreshAfterMutation();
   };
   const handleResultDelete = async (resultId: number) => {
     try {
@@ -341,13 +341,13 @@ export default function SessionPage() {
         errorMessage(mutationError, "Gagal menghapus data stock opname."),
         "error",
       );
-      return;
+      throw mutationError;
     }
     showToast("Data stock opname berhasil dihapus.");
     clearSelection();
     setAuditRefresh((value) => value + 1);
     setSummaryRefresh((value) => value + 1);
-    await refreshAfterMutation();
+    void refreshAfterMutation();
   };
   const handleResultCreate = async (data: StockOpnameCreateRequest) => {
     try {
@@ -360,7 +360,7 @@ export default function SessionPage() {
     clearSelection();
     setAuditRefresh((value) => value + 1);
     setSummaryRefresh((value) => value + 1);
-    await refreshAfterMutation();
+    void refreshAfterMutation();
   };
 
   const handleMoveRequest = (item: { rackId: number; rackName: string; id: number }) => {
@@ -386,7 +386,7 @@ export default function SessionPage() {
     showToast(
       `${result.data.moved_count} item dipindah${result.data.merged_count ? `, ${result.data.merged_count} digabung` : ""}.`,
     );
-    await refreshAfterMutation();
+    void refreshAfterMutation();
   };
 
   const handleCoordinatorFilter = (value: string) => {
@@ -527,7 +527,7 @@ export default function SessionPage() {
     setFactorTarget(undefined);
     setAuditRefresh((value) => value + 1);
     setSummaryRefresh((value) => value + 1);
-    await refreshAfterMutation();
+    void refreshAfterMutation();
   };
 
   const rackOptions = racks.filter(
@@ -848,6 +848,9 @@ export default function SessionPage() {
             : "Sesi akan dibatalkan. Tindakan ini tidak dapat dibatalkan."
         }
         confirmLabel={pendingAction === "COMPLETED" ? "Selesai" : "Batalkan"}
+        pendingLabel={
+          pendingAction === "COMPLETED" ? "Menyelesaikan..." : "Membatalkan..."
+        }
         destructive={pendingAction === "CANCELLED"}
         onConfirm={() => changeStatus(pendingAction)}
       />

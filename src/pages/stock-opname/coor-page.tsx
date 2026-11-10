@@ -302,13 +302,13 @@ export default function CoorPage() {
         errorMessage(mutationError, "Gagal memperbarui koordinator."),
         "error",
       );
-      return;
+      throw mutationError;
     }
     // Reflect the new status right away so the final actions stop being offered
     // even when the follow-up refresh fails.
     setCoordinator((current) => (current ? { ...current, status } : current));
     showToast(`Koordinator berhasil ${status === "COMPLETED" ? "diselesaikan" : "dibatalkan"}.`);
-    await refreshAfterMutation();
+    void refreshAfterMutation();
   };
   const handleResultUpdate = async (
     resultId: number,
@@ -326,7 +326,7 @@ export default function CoorPage() {
     showToast("Data stock opname berhasil diperbarui.");
     clearSelection();
     setAuditRefresh((value) => value + 1);
-    await refreshAfterMutation();
+    void refreshAfterMutation();
   };
   const handleResultDelete = async (resultId: number) => {
     try {
@@ -336,12 +336,12 @@ export default function CoorPage() {
         errorMessage(mutationError, "Gagal menghapus data stock opname."),
         "error",
       );
-      return;
+      throw mutationError;
     }
     showToast("Data stock opname berhasil dihapus.");
     clearSelection();
     setAuditRefresh((value) => value + 1);
-    await refreshAfterMutation();
+    void refreshAfterMutation();
   };
   const handleResultCreate = async (data: StockOpnameCreateRequest) => {
     try {
@@ -353,7 +353,7 @@ export default function CoorPage() {
     showToast("Item berhasil ditambahkan.");
     clearSelection();
     setAuditRefresh((value) => value + 1);
-    await refreshAfterMutation();
+    void refreshAfterMutation();
   };
 
   const handleMoveRequest = (item: { rackId: number; rackName: string; id: number }) => {
@@ -382,7 +382,7 @@ export default function CoorPage() {
     showToast(
       `${result.data.moved_count} item dipindah${result.data.merged_count ? `, ${result.data.merged_count} digabung` : ""}.`,
     );
-    await refreshAfterMutation();
+    void refreshAfterMutation();
   };
 
   const handleRackFilter = (value: string) => {
@@ -428,7 +428,7 @@ export default function CoorPage() {
       throw mutationError;
     }
     showToast("Rak berhasil dihapus.");
-    await refreshAfterMutation();
+    void refreshAfterMutation();
   };
 
   if (!Number.isFinite(id) || !Number.isFinite(session)) {
@@ -578,7 +578,7 @@ export default function CoorPage() {
     clearSelection();
     setFactorTarget(undefined);
     setAuditRefresh((value) => value + 1);
-    await refreshAfterMutation();
+    void refreshAfterMutation();
   };
 
   return (
@@ -854,6 +854,9 @@ export default function CoorPage() {
             : "Koordinator akan dibatalkan. Tindakan ini tidak dapat dibatalkan."
         }
         confirmLabel={pendingAction === "COMPLETED" ? "Selesai" : "Batalkan"}
+        pendingLabel={
+          pendingAction === "COMPLETED" ? "Menyelesaikan..." : "Membatalkan..."
+        }
         destructive={pendingAction === "CANCELLED"}
         onConfirm={() => changeStatus(pendingAction)}
       />

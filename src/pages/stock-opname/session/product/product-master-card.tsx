@@ -112,18 +112,18 @@ export default function ProductMasterCard({
     }
     showToast("Produk berhasil ditambahkan.");
     onProductsChanged?.();
-    await refreshProducts();
+    void refreshProducts();
   };
   const handleDelete = async (id: number) => {
     try {
       await deleteProduct(id, sessionId);
     } catch (mutationError) {
       showToast(errorMessage(mutationError, "Gagal menghapus produk."), "error");
-      return;
+      throw mutationError;
     }
     showToast("Produk berhasil dihapus.");
     onProductsChanged?.();
-    await refreshProducts();
+    void refreshProducts();
   };
   const handleUpdate = async (id: number, data: UpdateProductRequest) => {
     try {
@@ -134,7 +134,7 @@ export default function ProductMasterCard({
     }
     showToast("Produk berhasil diperbarui.");
     onProductsChanged?.();
-    await refreshProducts();
+    void refreshProducts();
   };
 
   return (

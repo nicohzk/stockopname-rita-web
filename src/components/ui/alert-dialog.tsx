@@ -1,3 +1,4 @@
+import { useRef, useState } from "react"
 import {
   Dialog,
   DialogClose,
@@ -15,9 +16,15 @@ interface AlertDialogProps {
   title: string
   description: string
   confirmLabel?: string
+  pendingLabel?: string
   cancelLabel?: string
   destructive?: boolean
-  onConfirm: () => void | Promise<void>
+  /**
+   * Must return a promise for the work behind the confirmation. Rejection keeps
+   * the dialog open (the caller is expected to surface the error via toast) so
+   * the admin can retry without losing the row context.
+   */
+  onConfirm: () => Promise<void>
 }
 
 export function AlertDialog({
@@ -26,31 +33,54 @@ export function AlertDialog({
   title,
   description,
   confirmLabel = "Confirm",
+  pendingLabel = "Memproses...",
   cancelLabel = "Cancel",
   destructive = false,
   onConfirm,
 }: AlertDialogProps) {
+  const [pending, setPending] = useState(false)
+  // State alone is not enough: two clicks in the same tick both read the old
+  // value, so this ref latch is what actually blocks a double submit.
+  const inFlight = useRef(false)
+
   const handleConfirm = async () => {
-    await onConfirm()
-    onOpenChange(false)
+    if (inFlight.current) return
+    inFlight.current = true
+    setPending(true)
+    try {
+      await onConfirm()
+      onOpenChange(false)
+    } catch {
+      // Error already reported by the caller; stay open for a retry.
+    } finally {
+      inFlight.current = false
+      setPending(false)
+    }
+  }
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    // Do not let Escape or a backdrop click hide a request that is in flight.
+    if (pending && !nextOpen) return
+    onOpenChange(nextOpen)
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent showCloseButton={false} aria-busy={pending}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <DialogClose render={<Button variant="outline" />}>
+          <DialogClose render={<Button variant="outline" disabled={pending} />}>
             {cancelLabel}
           </DialogClose>
           <Button
             variant={destructive ? "destructive" : "default"}
             onClick={() => void handleConfirm()}
+            disabled={pending}
           >
-            {confirmLabel}
+            {pending ? pendingLabel : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
