@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
-import { Notice, RetryButton } from "@/components/ui/notice";
+import { Notice, ErrorState, RetryButton } from "@/components/ui/notice";
 import { errorMessage, refreshWarningMessage } from "@/lib/errors";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Printer } from "lucide-react";
@@ -66,6 +66,22 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
+// Each part of the page loads independently: one failing request must not take
+// the others down with it.
+type PageSection = "session" | "coordinators" | "results" | "progress" | "productCount";
+
+const SECTION_LABELS: Record<PageSection, string> = {
+  session: "sesi",
+  coordinators: "koordinator",
+  results: "daftar hasil",
+  progress: "progres rak",
+  productCount: "jumlah produk",
+};
+
+function describeSections(sections: PageSection[]): string {
+  return sections.map((section) => SECTION_LABELS[section]).join(", ");
+}
+
 export default function SessionPage() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
@@ -93,9 +109,10 @@ export default function SessionPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [refreshWarning, setRefreshWarning] = useState<string>();
+  const [failedSections, setFailedSections] = useState<PageSection[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<"COMPLETED" | "CANCELLED">("COMPLETED");
-  const [productCount, setProductCount] = useState(0);
+  const [productCount, setProductCount] = useState<number>();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteCode, setDeleteCode] = useState("");
   const [deleteError, setDeleteError] = useState<string>();
@@ -123,7 +140,7 @@ export default function SessionPage() {
 
   const fetchPageData = useCallback(
     () =>
-      Promise.all([
+      Promise.allSettled([
         getSession(id),
         getCoordinators(id),
         getStockOpnames({
@@ -139,35 +156,81 @@ export default function SessionPage() {
     [id, filterCoordinatorId, filterRackId, resultPage, resultSearch],
   );
 
-  const applyPageData = useCallback(
+  // Applies whatever actually arrived and reports which sections failed, so one
+  // broken endpoint cannot discard the data that did load.
+  const applyOutcomes = useCallback(
     ([
-      loadedSession,
-      loadedCoordinators,
-      loadedResults,
-      loadedProgress,
-      loadedProductCount,
+      sessionOutcome,
+      coordinatorsOutcome,
+      resultsOutcome,
+      progressOutcome,
+      productCountOutcome,
     ]: Awaited<ReturnType<typeof fetchPageData>>) => {
-      setSession(loadedSession);
-      setCoordinators(loadedCoordinators);
-      setResults(loadedResults.data);
-      setResultPage(loadedResults.pagination.page);
-      setResultTotalPages(loadedResults.pagination.total_pages || 1);
-      setResultTotalItems(loadedResults.pagination.total_items ?? 0);
-      setProgress(loadedProgress);
-      setProductCount(loadedProductCount);
-      setError(undefined);
+      const failed: PageSection[] = [];
+
+      if (sessionOutcome.status === "fulfilled") {
+        setSession(sessionOutcome.value);
+      } else {
+        failed.push("session");
+      }
+
+      if (coordinatorsOutcome.status === "fulfilled") {
+        setCoordinators(coordinatorsOutcome.value);
+      } else {
+        failed.push("coordinators");
+      }
+
+      if (resultsOutcome.status === "fulfilled") {
+        setResults(resultsOutcome.value.data);
+        setResultPage(resultsOutcome.value.pagination.page);
+        setResultTotalPages(resultsOutcome.value.pagination.total_pages || 1);
+        setResultTotalItems(resultsOutcome.value.pagination.total_items ?? 0);
+      } else {
+        failed.push("results");
+      }
+
+      if (progressOutcome.status === "fulfilled") {
+        setProgress(progressOutcome.value);
+      } else {
+        failed.push("progress");
+      }
+
+      if (productCountOutcome.status === "fulfilled") {
+        setProductCount(productCountOutcome.value);
+      } else {
+        failed.push("productCount");
+      }
+
+      return failed;
     },
     [],
+  );
+
+  // A page without a session has nothing to render, so that failure also sets
+  // the fatal `error`; the render decides between the error screen (no session
+  // yet) and the warning banner (session already on screen).
+  const reportOutcomes = useCallback(
+    (outcomes: Awaited<ReturnType<typeof fetchPageData>>) => {
+      const failed = applyOutcomes(outcomes);
+      const sessionOutcome = outcomes[0];
+
+      if (sessionOutcome.status === "rejected") {
+        setError(errorMessage(sessionOutcome.reason, "Gagal memuat data sesi."));
+      } else {
+        setError(undefined);
+      }
+
+      setFailedSections(failed);
+    },
+    [applyOutcomes],
   );
 
   const loadData = async () => {
     setLoading(true);
     setError(undefined);
     try {
-      applyPageData(await fetchPageData());
+      reportOutcomes(await fetchPageData());
       setRefreshWarning(undefined);
-    } catch (loadError) {
-      setError(errorMessage(loadError, "Gagal memuat data sesi."));
     } finally {
       setLoading(false);
     }
@@ -176,12 +239,13 @@ export default function SessionPage() {
   // Runs after a mutation that already succeeded. A failing refresh must never
   // turn that success into an error: report a stale view instead.
   const refreshAfterMutation = async () => {
-    try {
-      applyPageData(await fetchPageData());
-      setError(undefined);
+    const outcomes = await fetchPageData();
+    reportOutcomes(outcomes);
+    const rejected = outcomes.find((outcome) => outcome.status === "rejected");
+    if (rejected && rejected.status === "rejected") {
+      setRefreshWarning(refreshWarningMessage(rejected.reason));
+    } else {
       setRefreshWarning(undefined);
-    } catch (refreshError) {
-      setRefreshWarning(refreshWarningMessage(refreshError));
     }
   };
 
@@ -263,16 +327,9 @@ export default function SessionPage() {
     let cancelled = false;
     const run = async () => {
       try {
-        const data = await fetchPageData();
+        const outcomes = await fetchPageData();
         if (cancelled) return;
-        applyPageData(data);
-      } catch (loadError) {
-        if (cancelled) return;
-        setError(
-          loadError instanceof Error
-            ? loadError.message
-            : "Gagal memuat data sesi.",
-        );
+        reportOutcomes(outcomes);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -281,7 +338,7 @@ export default function SessionPage() {
     return () => {
       cancelled = true;
     };
-  }, [id, fetchPageData, applyPageData]);
+  }, [id, fetchPageData, reportOutcomes]);
   useEffect(() => {
     if (!Number.isFinite(id)) return;
     // Filter options only; a failure must not block the result table.
@@ -559,11 +616,15 @@ export default function SessionPage() {
   }
   if (!session)
     return (
-      <div className="p-4 text-destructive">
-        {error ?? "Sesi tidak ditemukan."}
-      </div>
+      <ErrorState
+        message={error ?? "Sesi tidak ditemukan."}
+        onRetry={() => void loadData()}
+        retrying={loading}
+      />
     );
   const rack = progress[0];
+  const progressFailed = failedSections.includes("progress");
+  const resultsFailed = failedSections.includes("results");
   const progressPercent = rack?.rackAssigned
     ? Math.round((rack.rackCompleted / rack.rackAssigned) * 100)
     : 0;
@@ -578,10 +639,9 @@ export default function SessionPage() {
           }
         />
       ) : null}
-      {error ? (
+      {!refreshWarning && failedSections.length > 0 ? (
         <Notice
-          tone="error"
-          message={error}
+          message={`Sebagian data gagal dimuat: ${describeSections(failedSections)}. Menampilkan data terakhir yang berhasil dimuat.`}
           action={
             <RetryButton onRetry={() => void loadData()} retrying={loading} />
           }
@@ -664,7 +724,9 @@ export default function SessionPage() {
             <CardTitle>Progres</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{progressPercent}%</p>
+            <p className="text-2xl font-bold">
+              {progressFailed ? "—" : `${progressPercent}%`}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -673,7 +735,9 @@ export default function SessionPage() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
-              {rack?.rackCompleted ?? 0}/{rack?.rackAssigned ?? 0}
+              {progressFailed
+                ? "—"
+                : `${rack?.rackCompleted ?? 0}/${rack?.rackAssigned ?? 0}`}
             </p>
           </CardContent>
         </Card>
@@ -682,7 +746,9 @@ export default function SessionPage() {
             <CardTitle>Total Barang</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{rack?.total_items ?? 0}</p>
+            <p className="text-2xl font-bold">
+              {progressFailed ? "—" : (rack?.total_items ?? 0)}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -747,6 +813,13 @@ export default function SessionPage() {
             moveDisabledReason={selectionMode === "filter" ? undefined : moveDisabledReason}
             onClear={clearSelection}
           />
+          {resultsFailed && results.length === 0 ? (
+            <ErrorState
+              message="Daftar hasil gagal dimuat."
+              onRetry={() => void loadData()}
+              retrying={loading}
+            />
+          ) : (
           <StockOpnameTable
             columns={createResultColumns(
               handleResultUpdate,
@@ -823,6 +896,7 @@ export default function SessionPage() {
             totalPages={resultTotalPages}
             onPageChange={handleResultPageChange}
           />
+          )}
         </CardContent>
       </Card>
       <AuditTimeline key={`session-${id}`} sessionId={id} refreshKey={auditRefresh} />

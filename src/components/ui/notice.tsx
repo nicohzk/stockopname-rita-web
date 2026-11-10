@@ -43,3 +43,24 @@ export function RetryButton({
     </Button>
   );
 }
+
+/**
+ * Full-block error state for a page or a table that has nothing to show yet.
+ * Unlike Notice, it replaces the area instead of sitting above it.
+ */
+export function ErrorState({
+  message,
+  onRetry,
+  retrying = false,
+}: {
+  message: string;
+  onRetry?: () => void;
+  retrying?: boolean;
+}) {
+  return (
+    <div className="flex min-h-[30vh] flex-col items-center justify-center gap-3 p-6 text-center">
+      <p className="text-sm text-destructive">{message}</p>
+      {onRetry ? <RetryButton onRetry={onRetry} retrying={retrying} /> : null}
+    </div>
+  );
+}

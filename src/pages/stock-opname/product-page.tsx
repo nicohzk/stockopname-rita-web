@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { LoadingSpinner } from "@/components/ui/loading";
+import { ErrorState } from "@/components/ui/notice";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -35,6 +36,7 @@ export default function ProductPage() {
   const [productsLoading, setProductsLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [productsError, setProductsError] = useState<string>();
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!Number.isFinite(id)) return;
@@ -54,7 +56,7 @@ export default function ProductPage() {
       }
     };
     void loadData();
-  }, [id]);
+  }, [id, reloadKey]);
 
   const loadProducts = async (nextPage = page, nextSearch = search) => {
     setProductsLoading(true);
@@ -130,11 +132,13 @@ export default function ProductPage() {
       </div>
     );
   }
-  if (error || !session) {
+  if (!session) {
     return (
-      <div className="p-4 text-destructive">
-        {error ?? "Sesi tidak ditemukan."}
-      </div>
+      <ErrorState
+        message={error ?? "Sesi tidak ditemukan."}
+        onRetry={() => setReloadKey((value) => value + 1)}
+        retrying={loading}
+      />
     );
   }
 

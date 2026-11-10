@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
-import { Notice, RetryButton } from "@/components/ui/notice";
+import { Notice, ErrorState, RetryButton } from "@/components/ui/notice";
 import { errorMessage, refreshWarningMessage } from "@/lib/errors";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { AlertDialog } from "@/components/ui/alert-dialog";
@@ -71,6 +71,31 @@ import { openCoordinatorUploadSummary, openUploadReport } from "@/services/repor
 import { StatusBadge } from "@/components/ui/status-badge";
 import CoordinatorQRModal from "@/components/CoordinatorQRModal";
 
+// Each block of the page loads independently: one failing request must not take
+// the others down with it.
+type PageSection =
+  | "session"
+  | "coordinator"
+  | "results"
+  | "progress"
+  | "racks"
+  | "coordinators"
+  | "uploads";
+
+const SECTION_LABELS: Record<PageSection, string> = {
+  session: "sesi",
+  coordinator: "koordinator",
+  results: "daftar hasil",
+  progress: "progres rak",
+  racks: "daftar rak",
+  coordinators: "daftar koordinator",
+  uploads: "riwayat upload",
+};
+
+function describeSections(sections: PageSection[]): string {
+  return sections.map((section) => SECTION_LABELS[section]).join(", ");
+}
+
 export default function CoorPage() {
   const { sessionId, coorId } = useParams();
   const navigate = useNavigate();
@@ -107,6 +132,7 @@ export default function CoorPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [refreshWarning, setRefreshWarning] = useState<string>();
+  const [failedSections, setFailedSections] = useState<PageSection[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<"COMPLETED" | "CANCELLED">("COMPLETED");
   const [qrOpen, setQrOpen] = useState(false);
@@ -124,8 +150,8 @@ export default function CoorPage() {
   }>();
 
   const fetchPageData = useCallback(async () => {
-    const [loadedSession, loadedCoordinator, loadedResults, loadedProgress] =
-      await Promise.all([
+    const [sessionOutcome, coordinatorOutcome, resultsOutcome, progressOutcome] =
+      await Promise.allSettled([
         getSession(session),
         getCoordinator(id),
         getStockOpnames({
@@ -137,7 +163,7 @@ export default function CoorPage() {
         }),
         getRackProgress({ sessionId: session, coordinatorId: id }),
       ]);
-    const [racksResult, allRacksResult, coordinatorsResult, uploadsResult] =
+    const [racksOutcome, allRacksOutcome, coordinatorsOutcome, uploadsOutcome] =
       await Promise.allSettled([
         getRacks({ sessionId: session, coordinatorId: id }),
         getRacks({ sessionId: session }),
@@ -145,54 +171,112 @@ export default function CoorPage() {
         getUploads(id),
       ]);
     return {
-      loadedSession,
-      loadedCoordinator,
-      loadedResults,
-      loadedProgress,
-      racksResult,
-      allRacksResult,
-      coordinatorsResult,
-      uploadsResult,
+      sessionOutcome,
+      coordinatorOutcome,
+      resultsOutcome,
+      progressOutcome,
+      racksOutcome,
+      allRacksOutcome,
+      coordinatorsOutcome,
+      uploadsOutcome,
     };
   }, [session, id, filterRackId, resultPage, resultSearch]);
 
-  const applyPageData = useCallback(
+  // Applies whatever actually arrived; a failed section keeps its previous data
+  // instead of blanking the card.
+  const applyOutcomes = useCallback(
     (data: Awaited<ReturnType<typeof fetchPageData>>) => {
-      setSessionData(data.loadedSession);
-      setCoordinator(data.loadedCoordinator);
-      setAllRacks(
-        data.allRacksResult.status === "fulfilled" ? data.allRacksResult.value : [],
-      );
-      setCoordinators(
-        data.coordinatorsResult.status === "fulfilled"
-          ? data.coordinatorsResult.value
-          : [],
-      );
-      setRacks(data.racksResult.status === "fulfilled" ? data.racksResult.value : []);
-      setUploads(
-        data.uploadsResult.status === "fulfilled" ? data.uploadsResult.value : [],
-      );
-      if (data.uploadsResult.status === "rejected") {
-        showToast("Gagal memuat riwayat upload.", "error");
+      const failed: PageSection[] = [];
+
+      if (data.sessionOutcome.status === "fulfilled") {
+        setSessionData(data.sessionOutcome.value);
+      } else {
+        failed.push("session");
       }
-      setResults(data.loadedResults.data);
-      setResultPage(data.loadedResults.pagination.page);
-      setResultTotalPages(data.loadedResults.pagination.total_pages || 1);
-      setResultTotalItems(data.loadedResults.pagination.total_items ?? 0);
-      setProgress(data.loadedProgress);
-      setError(undefined);
+
+      if (data.coordinatorOutcome.status === "fulfilled") {
+        setCoordinator(data.coordinatorOutcome.value);
+      } else {
+        failed.push("coordinator");
+      }
+
+      if (data.resultsOutcome.status === "fulfilled") {
+        setResults(data.resultsOutcome.value.data);
+        setResultPage(data.resultsOutcome.value.pagination.page);
+        setResultTotalPages(data.resultsOutcome.value.pagination.total_pages || 1);
+        setResultTotalItems(data.resultsOutcome.value.pagination.total_items ?? 0);
+      } else {
+        failed.push("results");
+      }
+
+      if (data.progressOutcome.status === "fulfilled") {
+        setProgress(data.progressOutcome.value);
+      } else {
+        failed.push("progress");
+      }
+
+      if (data.racksOutcome.status === "fulfilled") {
+        setRacks(data.racksOutcome.value);
+      } else {
+        failed.push("racks");
+      }
+
+      if (data.allRacksOutcome.status === "fulfilled") {
+        setAllRacks(data.allRacksOutcome.value);
+      } else {
+        failed.push("racks");
+      }
+
+      if (data.coordinatorsOutcome.status === "fulfilled") {
+        setCoordinators(data.coordinatorsOutcome.value);
+      } else {
+        failed.push("coordinators");
+      }
+
+      if (data.uploadsOutcome.status === "fulfilled") {
+        setUploads(data.uploadsOutcome.value);
+      } else {
+        failed.push("uploads");
+      }
+
+      return Array.from(new Set(failed));
     },
-    [showToast],
+    [],
+  );
+
+  // The coordinator and its session are the page context: without them there is
+  // nothing safe to render, so their failure also sets the fatal `error`. The
+  // render decides between the error screen (nothing loaded yet) and the
+  // warning banner (page already on screen).
+  const reportOutcomes = useCallback(
+    (outcomes: Awaited<ReturnType<typeof fetchPageData>>) => {
+      const failed = applyOutcomes(outcomes);
+      const { coordinatorOutcome, sessionOutcome } = outcomes;
+
+      let failure: unknown;
+      if (coordinatorOutcome.status === "rejected") {
+        failure = coordinatorOutcome.reason;
+      } else if (sessionOutcome.status === "rejected") {
+        failure = sessionOutcome.reason;
+      }
+
+      if (failure !== undefined) {
+        setError(errorMessage(failure, "Gagal memuat data koordinator."));
+      } else {
+        setError(undefined);
+      }
+
+      setFailedSections(failed);
+    },
+    [applyOutcomes],
   );
 
   const loadData = async () => {
     setLoading(true);
     setError(undefined);
     try {
-      applyPageData(await fetchPageData());
+      reportOutcomes(await fetchPageData());
       setRefreshWarning(undefined);
-    } catch (loadError) {
-      setError(errorMessage(loadError, "Gagal memuat data koordinator."));
     } finally {
       setLoading(false);
     }
@@ -201,12 +285,22 @@ export default function CoorPage() {
   // Runs after a mutation that already succeeded. A failing refresh must never
   // turn that success into an error: report a stale view instead.
   const refreshAfterMutation = async () => {
-    try {
-      applyPageData(await fetchPageData());
-      setError(undefined);
+    const outcomes = await fetchPageData();
+    reportOutcomes(outcomes);
+    const rejected = [
+      outcomes.sessionOutcome,
+      outcomes.coordinatorOutcome,
+      outcomes.resultsOutcome,
+      outcomes.progressOutcome,
+      outcomes.racksOutcome,
+      outcomes.allRacksOutcome,
+      outcomes.coordinatorsOutcome,
+      outcomes.uploadsOutcome,
+    ].find((outcome) => outcome.status === "rejected");
+    if (rejected && rejected.status === "rejected") {
+      setRefreshWarning(refreshWarningMessage(rejected.reason));
+    } else {
       setRefreshWarning(undefined);
-    } catch (refreshError) {
-      setRefreshWarning(refreshWarningMessage(refreshError));
     }
   };
 
@@ -250,16 +344,9 @@ export default function CoorPage() {
     let cancelled = false;
     const run = async () => {
       try {
-        const data = await fetchPageData();
+        const outcomes = await fetchPageData();
         if (cancelled) return;
-        applyPageData(data);
-      } catch (loadError) {
-        if (cancelled) return;
-        setError(
-          loadError instanceof Error
-            ? loadError.message
-            : "Gagal memuat data koordinator.",
-        );
+        reportOutcomes(outcomes);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -268,7 +355,7 @@ export default function CoorPage() {
     return () => {
       cancelled = true;
     };
-  }, [id, session, fetchPageData, applyPageData]);
+  }, [id, session, fetchPageData, reportOutcomes]);
   useEffect(() => {
     if (resultSearchInput === resultSearch) return;
     const timer = window.setTimeout(() => {
@@ -446,13 +533,17 @@ export default function CoorPage() {
       </div>
     );
   }
-  if (!coordinator)
+  if (!coordinator || !sessionData)
     return (
-      <div className="p-4 text-destructive">
-        {error ?? "Koordinator tidak ditemukan."}
-      </div>
+      <ErrorState
+        message={error ?? "Koordinator tidak ditemukan."}
+        onRetry={() => void loadData()}
+        retrying={loading}
+      />
     );
   const rack = progress[0];
+  const progressFailed = failedSections.includes("progress");
+  const resultsFailed = failedSections.includes("results");
   const progressPercent = rack?.rackAssigned
     ? Math.round((rack.rackCompleted / rack.rackAssigned) * 100)
     : 0;
@@ -591,10 +682,9 @@ export default function CoorPage() {
           }
         />
       ) : null}
-      {error ? (
+      {!refreshWarning && failedSections.length > 0 ? (
         <Notice
-          tone="error"
-          message={error}
+          message={`Sebagian data gagal dimuat: ${describeSections(failedSections)}. Menampilkan data terakhir yang berhasil dimuat.`}
           action={
             <RetryButton onRetry={() => void loadData()} retrying={loading} />
           }
@@ -689,7 +779,9 @@ export default function CoorPage() {
             <CardTitle>Progres</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{progressPercent}%</p>
+            <p className="text-2xl font-bold">
+              {progressFailed ? "—" : `${progressPercent}%`}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -698,7 +790,9 @@ export default function CoorPage() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">
-              {rack?.rackCompleted ?? 0}/{rack?.rackAssigned ?? 0}
+              {progressFailed
+                ? "—"
+                : `${rack?.rackCompleted ?? 0}/${rack?.rackAssigned ?? 0}`}
             </p>
           </CardContent>
         </Card>
@@ -707,7 +801,9 @@ export default function CoorPage() {
             <CardTitle>Total Barang</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{rack?.total_items ?? 0}</p>
+            <p className="text-2xl font-bold">
+              {progressFailed ? "—" : (rack?.total_items ?? 0)}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -768,6 +864,13 @@ export default function CoorPage() {
             moveDisabledReason={selectionMode === "filter" ? undefined : moveDisabledReason}
             onClear={clearSelection}
           />
+          {resultsFailed && results.length === 0 ? (
+            <ErrorState
+              message="Daftar hasil gagal dimuat."
+              onRetry={() => void loadData()}
+              retrying={loading}
+            />
+          ) : (
           <StockOpnameTable
             columns={createResultColumns(
               handleResultUpdate,
@@ -829,6 +932,7 @@ export default function CoorPage() {
             totalPages={resultTotalPages}
             onPageChange={handleResultPageChange}
           />
+          )}
         </CardContent>
       </Card>
       <AuditTimeline key={`coordinator-${id}`} coordinatorId={id} refreshKey={auditRefresh} />
