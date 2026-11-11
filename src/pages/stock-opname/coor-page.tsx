@@ -31,8 +31,7 @@ import {
 } from "@/services/coordinator.service";
 import { deleteRack, getRackProgress, getRacks } from "@/services/rack.service";
 import { getUploads } from "@/services/upload.service";
-import { getStockOpnames } from "@/services/stock-opname.service";
-import { useResultTable, type ResultQueryPatch } from "./hooks/use-result-table";
+import { useResultTable } from "./hooks/use-result-table";
 import ResultCard from "./result/result-card";
 import QtyFactorDialog from "./result/qty-factor-dialog";
 import StockOpnameAddItemButton from "./result/so-add-item-btn";
@@ -92,18 +91,9 @@ export default function CoorPage() {
   const [coordinators, setCoordinators] = useState<Coordinator[]>([]);
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [auditRefresh, setAuditRefresh] = useState(0);
-  const [results, setResults] = useState<
-    Awaited<ReturnType<typeof getStockOpnames>>["data"]
-  >([]);
   const [progress, setProgress] = useState<
     Awaited<ReturnType<typeof getRackProgress>>
   >([]);
-  const [resultPage, setResultPage] = useState(1);
-  const [resultSearch, setResultSearch] = useState("");
-  const [resultSearchInput, setResultSearchInput] = useState("");
-  const [filterRackId, setFilterRackId] = useState("");
-  const [resultTotalPages, setResultTotalPages] = useState(1);
-  const [resultTotalItems, setResultTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [refreshWarning, setRefreshWarning] = useState<string>();
@@ -112,24 +102,15 @@ export default function CoorPage() {
   const [pendingAction, setPendingAction] = useState<"COMPLETED" | "CANCELLED">("COMPLETED");
   const [qrOpen, setQrOpen] = useState(false);
 
-  const filterActive = resultSearch.trim() !== "" || filterRackId !== "";
-
   // Mutasi memanggil penyegaran halaman lewat ref: refreshAfterMutation baru ada
   // setelah data pertama dimuat, sedangkan hook perlu callback-nya sejak awal.
   const refreshRef = useRef<() => void>(() => {});
   const table = useResultTable({
     sessionId: session,
+    coordinatorId: id,
     sessionStatus: sessionData?.status,
     coordinators,
     racks,
-    results,
-    totalItems: resultTotalItems,
-    filterActive,
-    filter: {
-      search: resultSearch,
-      coordinatorId: id,
-      rakId: filterRackId ? Number(filterRackId) : undefined,
-    },
     bulkScope: {
       scope: "coordinator",
       scopeId: id,
@@ -139,14 +120,6 @@ export default function CoorPage() {
       session: "Sesi atau koordinator sudah final.",
       coordinator: "Sesi atau koordinator sudah final.",
     },
-    onQueryChange: (patch: ResultQueryPatch) => {
-      if (patch.search !== undefined) {
-        setResultSearch(patch.search);
-        setResultSearchInput(patch.search);
-      }
-      if (patch.rackFilter !== undefined) setFilterRackId(patch.rackFilter);
-      setResultPage(patch.page ?? 1);
-    },
     onChanged: () => {
       setAuditRefresh((value) => value + 1);
       refreshRef.current();
@@ -155,7 +128,6 @@ export default function CoorPage() {
   });
   const {
     selectionMode,
-    clearSelection,
     activateFilterMode,
     openResultFromAudit,
     openFactor,
@@ -170,37 +142,34 @@ export default function CoorPage() {
   } = table;
 
   const fetchPageData = useCallback(async () => {
-    const [sessionOutcome, coordinatorOutcome, resultsOutcome, progressOutcome] =
-      await Promise.allSettled([
-        getSession(session),
-        getCoordinator(id),
-        getStockOpnames({
-          sessionId: session,
-          coordinatorId: id,
-          rakId: filterRackId ? Number(filterRackId) : undefined,
-          page: resultPage,
-          search: resultSearch,
-        }),
-        getRackProgress({ sessionId: session, coordinatorId: id }),
-      ]);
-    const [racksOutcome, allRacksOutcome, coordinatorsOutcome, uploadsOutcome] =
-      await Promise.allSettled([
-        getRacks({ sessionId: session, coordinatorId: id }),
-        getRacks({ sessionId: session }),
-        getCoordinators(session),
-        getUploads(id),
-      ]);
+    // One wave: the sections do not depend on each other.
+    const [
+      sessionOutcome,
+      coordinatorOutcome,
+      progressOutcome,
+      racksOutcome,
+      allRacksOutcome,
+      coordinatorsOutcome,
+      uploadsOutcome,
+    ] = await Promise.allSettled([
+      getSession(session),
+      getCoordinator(id),
+      getRackProgress({ sessionId: session, coordinatorId: id }),
+      getRacks({ sessionId: session, coordinatorId: id }),
+      getRacks({ sessionId: session }),
+      getCoordinators(session),
+      getUploads(id),
+    ]);
     return {
       sessionOutcome,
       coordinatorOutcome,
-      resultsOutcome,
       progressOutcome,
       racksOutcome,
       allRacksOutcome,
       coordinatorsOutcome,
       uploadsOutcome,
     };
-  }, [session, id, filterRackId, resultPage, resultSearch]);
+  }, [session, id]);
 
   // Applies whatever actually arrived; a failed section keeps its previous data
   // instead of blanking the card.
@@ -218,15 +187,6 @@ export default function CoorPage() {
         setCoordinator(data.coordinatorOutcome.value);
       } else {
         failed.push("coordinator");
-      }
-
-      if (data.resultsOutcome.status === "fulfilled") {
-        setResults(data.resultsOutcome.value.data);
-        setResultPage(data.resultsOutcome.value.pagination.page);
-        setResultTotalPages(data.resultsOutcome.value.pagination.total_pages || 1);
-        setResultTotalItems(data.resultsOutcome.value.pagination.total_items ?? 0);
-      } else {
-        failed.push("results");
       }
 
       if (data.progressOutcome.status === "fulfilled") {
@@ -310,7 +270,6 @@ export default function CoorPage() {
     const rejected = [
       outcomes.sessionOutcome,
       outcomes.coordinatorOutcome,
-      outcomes.resultsOutcome,
       outcomes.progressOutcome,
       outcomes.racksOutcome,
       outcomes.allRacksOutcome,
@@ -346,17 +305,6 @@ export default function CoorPage() {
       cancelled = true;
     };
   }, [id, session, fetchPageData, reportOutcomes]);
-  useEffect(() => {
-    if (resultSearchInput === resultSearch) return;
-    const timer = window.setTimeout(() => {
-      setLoading(true);
-      setError(undefined);
-      setResultSearch(resultSearchInput);
-      setResultPage(1);
-      clearSelection();
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [resultSearchInput, resultSearch, clearSelection]);
 
   const changeStatus = async (status: "COMPLETED" | "CANCELLED") => {
     const canComplete = coordinator?.status === "IN_REVIEW";
@@ -386,19 +334,6 @@ export default function CoorPage() {
     void refreshAfterMutation();
   };
   const handleRackMoveRequest = (rack: Rack) => openRackMove(rack);
-
-  const handleRackFilter = (value: string) => {
-    setLoading(true);
-    setError(undefined);
-    setFilterRackId(value);
-    setResultPage(1);
-    clearSelection();
-  };
-  const handleResultPageChange = (nextPage: number) => {
-    setLoading(true);
-    setError(undefined);
-    setResultPage(nextPage);
-  };
   const handleOpenUploadReport = async (uploadId: number, includeCarton = false) => {
     try {
       await openUploadReport(uploadId, includeCarton);
@@ -458,7 +393,6 @@ export default function CoorPage() {
     );
   const rack = progress[0];
   const progressFailed = failedSections.includes("progress");
-  const resultsFailed = failedSections.includes("results");
   const progressPercent = rack?.rackAssigned
     ? Math.round((rack.rackCompleted / rack.rackAssigned) * 100)
     : 0;
@@ -639,20 +573,14 @@ export default function CoorPage() {
       </Card>
       <ResultCard
         table={table}
-        results={results}
-        totalItems={resultTotalItems}
-        filterActive={filterActive}
-        resultsFailed={resultsFailed}
-        loading={loading}
-        onRetry={() => void loadData()}
         isRowReadOnly={coordinatorReadOnly}
         filters={
           <div className="flex flex-wrap gap-2">
             <select
               aria-label="Filter rak"
               className="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-background [&>option]:text-foreground"
-              value={filterRackId}
-              onChange={(event) => handleRackFilter(event.target.value)}
+              value={table.rackFilter}
+              onChange={(event) => table.handleRackFilter(event.target.value)}
               disabled={racks.length === 0}
             >
               <option value="">Semua rak</option>
@@ -662,21 +590,21 @@ export default function CoorPage() {
                 </option>
               ))}
             </select>
-            {resultTotalItems > 0 ? (
+            {table.totalItems > 0 ? (
               <Button
                 variant={selectionMode === "filter" ? "default" : "outline"}
                 size="sm"
                 onClick={activateFilterMode}
-                disabled={selectionMode === "filter" || resultTotalItems > 1000}
+                disabled={selectionMode === "filter" || table.totalItems > 1000}
                 title={
-                  resultTotalItems > 1000
-                    ? filterActive
+                  table.totalItems > 1000
+                    ? table.filterActive
                       ? "Persempit filter; maksimal 1000 baris."
                       : "Maksimal 1000 baris; faktorkan per rak."
                     : undefined
                 }
               >
-                Pilih semua {resultTotalItems} hasil{filterActive ? " filter" : ""}
+                Pilih semua {table.totalItems} hasil{table.filterActive ? " filter" : ""}
               </Button>
             ) : null}
           </div>
@@ -689,11 +617,6 @@ export default function CoorPage() {
             disabled={coordinatorReadOnly}
           />
         }
-        searchValue={resultSearchInput}
-        onSearch={setResultSearchInput}
-        page={resultPage}
-        totalPages={resultTotalPages}
-        onPageChange={handleResultPageChange}
       />
       <AuditSection coordinatorId={id} refreshKey={auditRefresh} onOpenResult={openResultFromAudit} />
       {moveState ? (

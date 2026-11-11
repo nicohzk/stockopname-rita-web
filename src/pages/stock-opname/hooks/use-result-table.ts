@@ -1,9 +1,10 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { RowSelectionState, Updater } from "@tanstack/react-table";
 import { errorMessage } from "@/lib/errors";
 import {
   createStockOpname,
   deleteStockOpname,
+  getStockOpnames,
   moveStockOpname,
   setQtyFactor,
   updateStockOpname,
@@ -22,37 +23,19 @@ import type { Rack } from "@/types/rack";
 
 type ShowToast = (message: string, type?: "error") => void;
 
-export type ResultQueryPatch = {
-  page?: number;
-  search?: string;
-  rackFilter?: string;
-  coordinatorFilter?: string;
-};
-
-export type ResultFilterValues = {
-  search: string;
-  coordinatorId?: number;
-  rakId?: number;
-};
-
 export type ResultTableOptions = {
   sessionId: number;
+  /** Halaman koordinator: seluruh tabel selalu dibatasi ke satu koordinator. */
+  coordinatorId?: number;
   sessionStatus?: string;
   coordinators: Coordinator[];
   /** Semua rak sesi: untuk lookup rak sumber dan sasaran pemindahan. */
   racks: Rack[];
-  results: StockOpname[];
-  totalItems: number;
-  /** True saat tabel sedang dipersempit pencarian atau filter. */
-  filterActive: boolean;
-  filter: ResultFilterValues;
   /** Cakupan dialog faktor qty saat tabel tidak sedang difilter. */
   bulkScope: { scope: QtyFactorScope; scopeId?: number; label: string };
   /** Pesan saat pemindahan diblokir status sesi/koordinator, bukan seleksi. */
   moveBlockedMessages: { session: string; coordinator: string };
-  /** Mengubah halaman/pencarian/filter; halaman yang memegang state kueri. */
-  onQueryChange: (patch: ResultQueryPatch) => void;
-  /** Dipanggil setelah mutasi berhasil: segarkan audit, ringkasan, dan tabel. */
+  /** Dipanggil setelah mutasi berhasil: segarkan audit dan ringkasan halaman. */
   onChanged: () => void;
   showToast: ShowToast;
 };
@@ -74,26 +57,36 @@ export type FactorTarget = {
   resultIds?: number[];
 };
 
+const SEARCH_DEBOUNCE_MS = 250;
+
 /**
- * State dan aksi tabel hasil stock opname: seleksi baris, dialog pindah, dialog
- * faktor qty, dan mutasi hasil. Data serta state kueri tetap dipegang halaman,
- * karena keduanya menyatu dengan cara halaman memuat data.
+ * Pemilik tabel hasil stock opname: kueri, data, seleksi, dialog pindah, dialog
+ * faktor qty, dan mutasi hasil. Kueri dimiliki di sini supaya mengubah halaman,
+ * pencarian, atau filter hanya memuat ulang tabel ini — bukan seluruh halaman.
  */
 export function useResultTable({
   sessionId,
+  coordinatorId,
   sessionStatus,
   coordinators,
   racks,
-  results,
-  totalItems,
-  filterActive,
-  filter,
   bulkScope,
   moveBlockedMessages,
-  onQueryChange,
   onChanged,
   showToast,
 }: ResultTableOptions) {
+  const [results, setResults] = useState<StockOpname[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [rackFilter, setRackFilter] = useState("");
+  const [coordinatorFilter, setCoordinatorFilter] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [selectedItems, setSelectedItems] = useState<Map<number, ResultSelectionItem>>(new Map());
   const [selectionMode, setSelectionMode] = useState<SelectionMode>("manual");
@@ -105,6 +98,80 @@ export function useResultTable({
     setSelectedItems(new Map());
     setSelectionMode("manual");
   }, []);
+
+  const effectiveCoordinatorId = coordinatorId ?? (coordinatorFilter ? Number(coordinatorFilter) : undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setLoading(true);
+      try {
+        const payload = await getStockOpnames({
+          sessionId,
+          coordinatorId: effectiveCoordinatorId,
+          rakId: rackFilter ? Number(rackFilter) : undefined,
+          page,
+          search,
+        });
+        if (cancelled) return;
+        setResults(payload.data);
+        setPage(payload.pagination.page);
+        setTotalPages(payload.pagination.total_pages || 1);
+        setTotalItems(payload.pagination.total_items ?? 0);
+        setFailed(false);
+      } catch {
+        // Data lama sengaja dipertahankan: tabel kosong lebih buruk daripada
+        // tabel basi dengan penanda gagal.
+        if (!cancelled) setFailed(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, effectiveCoordinatorId, rackFilter, page, search, reloadKey]);
+
+  // Mengetik di kotak cari tidak boleh mengosongkan halaman; hanya tabel yang
+  // dimuat ulang setelah jeda singkat.
+  useEffect(() => {
+    if (searchInput === search) return;
+    const timer = window.setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+      clearSelection();
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [searchInput, search, clearSelection]);
+
+  const reload = useCallback(() => setReloadKey((value) => value + 1), []);
+
+  const handleRackFilter = (value: string) => {
+    setRackFilter(value);
+    setPage(1);
+    clearSelection();
+  };
+
+  const handleCoordinatorFilter = (value: string) => {
+    setCoordinatorFilter(value);
+    setRackFilter("");
+    setPage(1);
+    clearSelection();
+  };
+
+  const handlePageChange = (nextPage: number) => setPage(nextPage);
+
+  const filterActive = search.trim() !== "" || rackFilter !== "" || coordinatorFilter !== "";
+
+  const clearFilters = () => {
+    setSearch("");
+    setSearchInput("");
+    setRackFilter("");
+    setCoordinatorFilter("");
+    setPage(1);
+    clearSelection();
+  };
 
   const handleRowSelectionChange = (updater: Updater<RowSelectionState>) => {
     const next = typeof updater === "function" ? updater(rowSelection) : updater;
@@ -175,7 +242,9 @@ export function useResultTable({
 
   // Jumps from an audit entry to the matching row in the results table.
   const openResultFromAudit = (term: string) => {
-    onQueryChange({ search: term, page: 1 });
+    setSearchInput(term);
+    setSearch(term);
+    setPage(1);
     requestAnimationFrame(() => {
       document.getElementById("stock-opname-results")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
@@ -261,6 +330,7 @@ export function useResultTable({
       }`,
     );
     onChanged();
+    reload();
   };
 
   const handleFactorSubmit = async (factor: QtyFactor, note: string) => {
@@ -273,9 +343,9 @@ export function useResultTable({
         filter:
           factorTarget.scope === "filter"
             ? {
-                search: filter.search.trim() || undefined,
-                coordinatorId: filter.coordinatorId,
-                rakId: filter.rakId,
+                search: search.trim() || undefined,
+                coordinatorId: effectiveCoordinatorId,
+                rakId: rackFilter ? Number(rackFilter) : undefined,
               }
             : undefined,
         qtyFactor: factor,
@@ -293,6 +363,7 @@ export function useResultTable({
     clearSelection();
     setFactorTarget(undefined);
     onChanged();
+    reload();
   };
 
   const handleResultUpdate = async (resultId: number, data: StockOpnameUpdateRequest) => {
@@ -308,6 +379,7 @@ export function useResultTable({
     showToast("Data stock opname berhasil diperbarui.");
     clearSelection();
     onChanged();
+    reload();
   };
 
   const handleResultDelete = async (resultId: number) => {
@@ -323,6 +395,7 @@ export function useResultTable({
     showToast("Data stock opname berhasil dihapus.");
     clearSelection();
     onChanged();
+    reload();
   };
 
   const handleResultCreate = async (data: StockOpnameCreateRequest) => {
@@ -335,9 +408,28 @@ export function useResultTable({
     showToast("Item berhasil ditambahkan.");
     clearSelection();
     onChanged();
+    reload();
   };
 
   return {
+    // data & kueri
+    results,
+    page,
+    totalPages,
+    totalItems,
+    searchInput,
+    setSearchInput,
+    rackFilter,
+    coordinatorFilter,
+    handleRackFilter,
+    handleCoordinatorFilter,
+    handlePageChange,
+    filterActive,
+    clearFilters,
+    loading,
+    failed,
+    reload,
+    // seleksi
     rowSelection,
     selectedItemsList,
     selectedCount,
@@ -347,20 +439,24 @@ export function useResultTable({
     handleRowSelectionChange,
     clearSelection,
     activateFilterMode,
+    // audit → tabel
     openResultFromAudit,
+    // dialog faktor
     openItemFactor,
     openSelectedFactor,
     openBulkFactor,
     openFactor,
+    factorTarget,
+    closeFactor: () => setFactorTarget(undefined),
+    handleFactorSubmit,
+    // dialog pindah
     handleMoveRequest,
     openSelectedMove,
     openRackMove,
     moveState,
     closeMove: () => setMoveState(undefined),
     handleMoveSubmit,
-    factorTarget,
-    closeFactor: () => setFactorTarget(undefined),
-    handleFactorSubmit,
+    // mutasi
     handleResultUpdate,
     handleResultDelete,
     handleResultCreate,

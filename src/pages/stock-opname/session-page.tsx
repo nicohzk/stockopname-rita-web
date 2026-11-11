@@ -24,10 +24,9 @@ import { getRackProgress, getRacks } from "@/services/rack.service";
 import type { Rack } from "@/types/rack";
 import {
   getSellSummary,
-  getStockOpnames,
 } from "@/services/stock-opname.service";
 import type { SellSummaryGroup } from "@/types/stock-opname";
-import { useResultTable, type ResultQueryPatch } from "./hooks/use-result-table";
+import { useResultTable } from "./hooks/use-result-table";
 import ResultCard from "./result/result-card";
 import QtyFactorDialog from "./result/qty-factor-dialog";
 import SellSummaryCard from "./result/sell-summary-card";
@@ -53,13 +52,13 @@ import {
 } from "@/components/ui/breadcrumb";
 
 // Each part of the page loads independently: one failing request must not take
-// the others down with it.
-type PageSection = "session" | "coordinators" | "results" | "progress" | "productCount" | "sellTotal";
+// the others down with it. The result table is not listed here: it loads and
+// refreshes on its own through useResultTable.
+type PageSection = "session" | "coordinators" | "progress" | "productCount" | "sellTotal";
 
 const SECTION_LABELS: Record<PageSection, string> = {
   session: "sesi",
   coordinators: "koordinator",
-  results: "daftar hasil",
   progress: "progres rak",
   productCount: "jumlah produk",
   sellTotal: "nilai jual",
@@ -79,20 +78,10 @@ export default function SessionPage() {
   const [coordinators, setCoordinators] = useState<
     Awaited<ReturnType<typeof getCoordinators>>
   >([]);
-  const [results, setResults] = useState<
-    Awaited<ReturnType<typeof getStockOpnames>>["data"]
-  >([]);
   const [progress, setProgress] = useState<
     Awaited<ReturnType<typeof getRackProgress>>
   >([]);
   const [racks, setRacks] = useState<Rack[]>([]);
-  const [filterCoordinatorId, setFilterCoordinatorId] = useState("");
-  const [filterRackId, setFilterRackId] = useState("");
-  const [resultPage, setResultPage] = useState(1);
-  const [resultSearch, setResultSearch] = useState("");
-  const [resultSearchInput, setResultSearchInput] = useState("");
-  const [resultTotalPages, setResultTotalPages] = useState(1);
-  const [resultTotalItems, setResultTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [refreshWarning, setRefreshWarning] = useState<string>();
@@ -107,8 +96,6 @@ export default function SessionPage() {
   const [deleting, setDeleting] = useState(false);
   const [auditRefresh, setAuditRefresh] = useState(0);
   const [summaryRefresh, setSummaryRefresh] = useState(0);
-
-  const filterActive = resultSearch.trim() !== "" || filterCoordinatorId !== "" || filterRackId !== "";
 
   const coordinatorStatusById = new Map(
     coordinators.map((coordinator) => [coordinator.id, coordinator.status]),
@@ -126,27 +113,10 @@ export default function SessionPage() {
     sessionStatus: session?.status,
     coordinators,
     racks,
-    results,
-    totalItems: resultTotalItems,
-    filterActive,
-    filter: {
-      search: resultSearch,
-      coordinatorId: filterCoordinatorId ? Number(filterCoordinatorId) : undefined,
-      rakId: filterRackId ? Number(filterRackId) : undefined,
-    },
     bulkScope: { scope: "session", label: session?.code ?? "Sesi" },
     moveBlockedMessages: {
       session: "Sesi sudah final.",
       coordinator: "Koordinator sudah final.",
-    },
-    onQueryChange: (patch: ResultQueryPatch) => {
-      if (patch.search !== undefined) {
-        setResultSearch(patch.search);
-        setResultSearchInput(patch.search);
-      }
-      if (patch.coordinatorFilter !== undefined) setFilterCoordinatorId(patch.coordinatorFilter);
-      if (patch.rackFilter !== undefined) setFilterRackId(patch.rackFilter);
-      setResultPage(patch.page ?? 1);
     },
     onChanged: () => {
       setAuditRefresh((value) => value + 1);
@@ -157,7 +127,6 @@ export default function SessionPage() {
   });
   const {
     selectionMode,
-    clearSelection,
     activateFilterMode,
     openResultFromAudit,
     moveState,
@@ -174,18 +143,11 @@ export default function SessionPage() {
       Promise.allSettled([
         getSession(id),
         getCoordinators(id),
-        getStockOpnames({
-          sessionId: id,
-          coordinatorId: filterCoordinatorId ? Number(filterCoordinatorId) : undefined,
-          rakId: filterRackId ? Number(filterRackId) : undefined,
-          page: resultPage,
-          search: resultSearch,
-        }),
         getRackProgress({ sessionId: id }),
         getProductCount(id),
         getSellSummary(id, "session"),
       ]),
-    [id, filterCoordinatorId, filterRackId, resultPage, resultSearch],
+    [id],
   );
 
   // Applies whatever actually arrived and reports which sections failed, so one
@@ -194,7 +156,6 @@ export default function SessionPage() {
     ([
       sessionOutcome,
       coordinatorsOutcome,
-      resultsOutcome,
       progressOutcome,
       productCountOutcome,
       sellTotalOutcome,
@@ -211,15 +172,6 @@ export default function SessionPage() {
         setCoordinators(coordinatorsOutcome.value);
       } else {
         failed.push("coordinators");
-      }
-
-      if (resultsOutcome.status === "fulfilled") {
-        setResults(resultsOutcome.value.data);
-        setResultPage(resultsOutcome.value.pagination.page);
-        setResultTotalPages(resultsOutcome.value.pagination.total_pages || 1);
-        setResultTotalItems(resultsOutcome.value.pagination.total_items ?? 0);
-      } else {
-        failed.push("results");
       }
 
       if (progressOutcome.status === "fulfilled") {
@@ -351,17 +303,6 @@ export default function SessionPage() {
     // Filter options only; a failure must not block the result table.
     getRacks({ sessionId: id }).then(setRacks).catch(() => undefined);
   }, [id]);
-  useEffect(() => {
-    if (resultSearchInput === resultSearch) return;
-    const timer = window.setTimeout(() => {
-      setLoading(true);
-      setError(undefined);
-      setResultSearch(resultSearchInput);
-      setResultPage(1);
-      clearSelection();
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [resultSearchInput, resultSearch, clearSelection]);
 
   const changeStatus = async (status: "COMPLETED" | "CANCELLED") => {
     try {
@@ -377,29 +318,9 @@ export default function SessionPage() {
     void refreshAfterMutation();
   };
 
-  const handleCoordinatorFilter = (value: string) => {
-    setLoading(true);
-    setError(undefined);
-    setFilterCoordinatorId(value);
-    setFilterRackId("");
-    setResultPage(1);
-    clearSelection();
-  };
-  const handleRackFilter = (value: string) => {
-    setLoading(true);
-    setError(undefined);
-    setFilterRackId(value);
-    setResultPage(1);
-    clearSelection();
-  };
-  const handleResultPageChange = (nextPage: number) => {
-    setLoading(true);
-    setError(undefined);
-    setResultPage(nextPage);
-  };
   const coordinatorCodeById = new Map(coordinators.map((coordinator) => [coordinator.id, coordinator.code]));
   const rackOptions = racks.filter(
-    (rack) => !filterCoordinatorId || rack.coordinatorId === Number(filterCoordinatorId),
+    (rack) => !table.coordinatorFilter || rack.coordinatorId === Number(table.coordinatorFilter),
   );
   const activeCoordinatorCount = coordinators.filter(
     (coordinator) => coordinator.status === "IN_PROGRESS",
@@ -435,7 +356,6 @@ export default function SessionPage() {
     );
   const rack = progress[0];
   const progressFailed = failedSections.includes("progress");
-  const resultsFailed = failedSections.includes("results");
   const sellTotalFailed = failedSections.includes("sellTotal");
   const progressPercent = rack?.rackAssigned
     ? Math.round((rack.rackCompleted / rack.rackAssigned) * 100)
@@ -617,20 +537,14 @@ export default function SessionPage() {
       <SellSummaryCard sessionId={id} refreshKey={summaryRefresh} />
       <ResultCard
         table={table}
-        results={results}
-        totalItems={resultTotalItems}
-        filterActive={filterActive}
-        resultsFailed={resultsFailed}
-        loading={loading}
-        onRetry={() => void loadData()}
         isRowReadOnly={isResultReadOnly}
         filters={
           <div className="flex flex-wrap gap-2">
             <select
               aria-label="Filter koordinator"
               className="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-background [&>option]:text-foreground"
-              value={filterCoordinatorId}
-              onChange={(event) => handleCoordinatorFilter(event.target.value)}
+              value={table.coordinatorFilter}
+              onChange={(event) => table.handleCoordinatorFilter(event.target.value)}
             >
               <option value="">Semua koordinator</option>
               {coordinators.map((coordinator) => (
@@ -642,34 +556,34 @@ export default function SessionPage() {
             <select
               aria-label="Filter rak"
               className="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-background [&>option]:text-foreground"
-              value={filterRackId}
-              onChange={(event) => handleRackFilter(event.target.value)}
+              value={table.rackFilter}
+              onChange={(event) => table.handleRackFilter(event.target.value)}
               disabled={rackOptions.length === 0}
             >
               <option value="">Semua rak</option>
               {rackOptions.map((rak) => (
                 <option key={rak.id} value={rak.id}>
-                  {filterCoordinatorId
+                  {table.coordinatorFilter
                     ? rak.name
                     : `${rak.name} - ${coordinatorCodeById.get(rak.coordinatorId) ?? ""}`}
                 </option>
               ))}
             </select>
-            {resultTotalItems > 0 ? (
+            {table.totalItems > 0 ? (
               <Button
                 variant={selectionMode === "filter" ? "default" : "outline"}
                 size="sm"
                 onClick={activateFilterMode}
-                disabled={selectionMode === "filter" || resultTotalItems > 1000}
+                disabled={selectionMode === "filter" || table.totalItems > 1000}
                 title={
-                  resultTotalItems > 1000
-                    ? filterActive
+                  table.totalItems > 1000
+                    ? table.filterActive
                       ? "Persempit filter; maksimal 1000 baris."
                       : "Maksimal 1000 baris; persempit lewat filter."
                     : undefined
                 }
               >
-                Pilih semua {resultTotalItems} hasil{filterActive ? " filter" : ""}
+                Pilih semua {table.totalItems} hasil{table.filterActive ? " filter" : ""}
               </Button>
             ) : null}
           </div>
@@ -682,11 +596,6 @@ export default function SessionPage() {
             disabled={session.status === "COMPLETED" || session.status === "CANCELLED"}
           />
         }
-        searchValue={resultSearchInput}
-        onSearch={setResultSearchInput}
-        page={resultPage}
-        totalPages={resultTotalPages}
-        onPageChange={handleResultPageChange}
       />
       <AuditSection sessionId={id} refreshKey={auditRefresh} onOpenResult={openResultFromAudit} />
       {moveState ? (

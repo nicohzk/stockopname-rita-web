@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ErrorState } from "@/components/ui/notice";
+import { ErrorState, Notice, RetryButton } from "@/components/ui/notice";
 import type { StockOpname } from "@/types/stock-opname";
 import type { useResultTable } from "../hooks/use-result-table";
 import { StockOpnameTable } from "./so-table";
@@ -17,12 +17,6 @@ type ResultTable = ReturnType<typeof useResultTable>;
 
 type ResultCardProps = {
   table: ResultTable;
-  results: StockOpname[];
-  totalItems: number;
-  filterActive: boolean;
-  resultsFailed: boolean;
-  loading: boolean;
-  onRetry: () => void;
   /**
    * Aturan read-only: halaman sesi menghitung per koordinator lewat fungsi,
    * halaman koordinator memakai satu status untuk semua baris.
@@ -32,30 +26,14 @@ type ResultCardProps = {
   filters: ReactNode;
   /** Tombol tambah item yang sudah dikonfigurasi halaman. */
   addButton: ReactNode;
-  searchValue: string;
-  onSearch: (value: string) => void;
-  page: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
 };
 
 /** Kartu hasil stock opname: pencarian, filter, seleksi, tabel, dan paginasi. */
 export default function ResultCard({
   table,
-  results,
-  totalItems,
-  filterActive,
-  resultsFailed,
-  loading,
-  onRetry,
   isRowReadOnly,
   filters,
   addButton,
-  searchValue,
-  onSearch,
-  page,
-  totalPages,
-  onPageChange,
 }: ResultCardProps) {
   return (
     <Card className="my-5" id="stock-opname-results">
@@ -66,8 +44,8 @@ export default function ResultCard({
       <CardContent>
         <ResultSelectionBar
           mode={table.selectionMode}
-          filtered={filterActive}
-          count={table.selectionMode === "filter" ? totalItems : table.selectedCount}
+          filtered={table.filterActive}
+          count={table.selectionMode === "filter" ? table.totalItems : table.selectedCount}
           onFactor={table.selectionMode === "filter" ? table.openBulkFactor : table.openSelectedFactor}
           onMove={table.openSelectedMove}
           moveDisabledReason={
@@ -77,35 +55,43 @@ export default function ResultCard({
           }
           onClear={table.clearSelection}
         />
-        {resultsFailed && results.length === 0 ? (
+        {table.failed && table.results.length === 0 ? (
           <ErrorState
             message="Daftar hasil gagal dimuat."
-            onRetry={onRetry}
-            retrying={loading}
+            onRetry={table.reload}
+            retrying={table.loading}
           />
         ) : (
-          <StockOpnameTable
-            columns={createResultColumns(
-              table.handleResultUpdate,
-              table.handleResultDelete,
-              table.handleMoveRequest,
-              isRowReadOnly,
-              table.openItemFactor,
-            )}
-            data={results}
-            selectable
-            rowSelection={table.rowSelection}
-            onRowSelectionChange={table.handleRowSelectionChange}
-            getRowId={(item) => String(item.id)}
-            filters={filters}
-            addButton={addButton}
-            onSearch={onSearch}
-            searchValue={searchValue}
-            loading={loading}
-            page={page}
-            totalPages={totalPages}
-            onPageChange={onPageChange}
-          />
+          <>
+            {table.failed ? (
+              <Notice
+                message="Gagal memperbarui daftar hasil. Menampilkan data terakhir yang berhasil dimuat."
+                action={<RetryButton onRetry={table.reload} retrying={table.loading} />}
+              />
+            ) : null}
+            <StockOpnameTable
+              columns={createResultColumns(
+                table.handleResultUpdate,
+                table.handleResultDelete,
+                table.handleMoveRequest,
+                isRowReadOnly,
+                table.openItemFactor,
+              )}
+              data={table.results}
+              selectable
+              rowSelection={table.rowSelection}
+              onRowSelectionChange={table.handleRowSelectionChange}
+              getRowId={(item) => String(item.id)}
+              filters={filters}
+              addButton={addButton}
+              onSearch={table.setSearchInput}
+              searchValue={table.searchInput}
+              loading={table.loading}
+              page={table.page}
+              totalPages={table.totalPages}
+              onPageChange={table.handlePageChange}
+            />
+          </>
         )}
       </CardContent>
     </Card>
