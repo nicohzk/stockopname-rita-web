@@ -28,16 +28,14 @@ import {
 } from "@/services/stock-opname.service";
 import type { SellSummaryGroup } from "@/types/stock-opname";
 import { useResultTable, type ResultQueryPatch } from "./hooks/use-result-table";
-import ResultSelectionBar from "./result/result-selection-bar";
+import ResultCard from "./result/result-card";
 import QtyFactorDialog from "./result/qty-factor-dialog";
 import SellSummaryCard from "./result/sell-summary-card";
 import StockOpnameAddItemButton from "./result/so-add-item-btn";
 import StockOpnameMoveDialog from "./result/so-move-dialog";
-import AuditTimeline from "./audit/audit-timeline";
+import AuditSection from "./audit/audit-section";
 import { CoordinatorTable } from "./coordinator/coordinator-table";
 import { createColumns as createCoordinatorColumns } from "./coordinator/coordinator-table-column";
-import { StockOpnameTable } from "./result/so-table";
-import { createColumns as createResultColumns } from "./result/so-table-column";
 import ProductMasterCard from "./session/product/product-master-card";
 import CoordinatorAddButton from "./session/coordinator-add-btn";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -158,27 +156,16 @@ export default function SessionPage() {
     showToast,
   });
   const {
-    rowSelection,
-    selectedCount,
     selectionMode,
-    moveDisabledReason,
-    handleRowSelectionChange,
     clearSelection,
     activateFilterMode,
     openResultFromAudit,
-    openItemFactor,
-    openSelectedFactor,
-    openBulkFactor,
-    handleMoveRequest,
-    openSelectedMove,
     moveState,
     closeMove,
     handleMoveSubmit,
     factorTarget,
     closeFactor,
     handleFactorSubmit,
-    handleResultUpdate,
-    handleResultDelete,
     handleResultCreate,
   } = table;
 
@@ -628,119 +615,80 @@ export default function SessionPage() {
         </CardContent>
       </Card>
       <SellSummaryCard sessionId={id} refreshKey={summaryRefresh} />
-      <Card className="my-5" id="stock-opname-results">
-        <CardHeader>
-          <CardTitle>Data Barang Stock Opname</CardTitle>
-          <CardDescription>Data terkini hasil koreksi admin</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResultSelectionBar
-            mode={selectionMode}
-            filtered={filterActive}
-            count={selectionMode === "filter" ? resultTotalItems : selectedCount}
-            onFactor={selectionMode === "filter" ? openBulkFactor : openSelectedFactor}
-            onMove={openSelectedMove}
-            moveDisabledReason={
-              selectionMode === "filter"
-                ? "Mode filter bisa mencakup banyak rak. Pindahkan hanya tersedia untuk pilihan manual dari satu rak."
-                : moveDisabledReason
-            }
-            onClear={clearSelection}
+      <ResultCard
+        table={table}
+        results={results}
+        totalItems={resultTotalItems}
+        filterActive={filterActive}
+        resultsFailed={resultsFailed}
+        loading={loading}
+        onRetry={() => void loadData()}
+        isRowReadOnly={isResultReadOnly}
+        filters={
+          <div className="flex flex-wrap gap-2">
+            <select
+              aria-label="Filter koordinator"
+              className="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-background [&>option]:text-foreground"
+              value={filterCoordinatorId}
+              onChange={(event) => handleCoordinatorFilter(event.target.value)}
+            >
+              <option value="">Semua koordinator</option>
+              {coordinators.map((coordinator) => (
+                <option key={coordinator.id} value={coordinator.id}>
+                  {coordinator.code}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Filter rak"
+              className="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-background [&>option]:text-foreground"
+              value={filterRackId}
+              onChange={(event) => handleRackFilter(event.target.value)}
+              disabled={rackOptions.length === 0}
+            >
+              <option value="">Semua rak</option>
+              {rackOptions.map((rak) => (
+                <option key={rak.id} value={rak.id}>
+                  {filterCoordinatorId
+                    ? rak.name
+                    : `${rak.name} - ${coordinatorCodeById.get(rak.coordinatorId) ?? ""}`}
+                </option>
+              ))}
+            </select>
+            {resultTotalItems > 0 ? (
+              <Button
+                variant={selectionMode === "filter" ? "default" : "outline"}
+                size="sm"
+                onClick={activateFilterMode}
+                disabled={selectionMode === "filter" || resultTotalItems > 1000}
+                title={
+                  resultTotalItems > 1000
+                    ? filterActive
+                      ? "Persempit filter; maksimal 1000 baris."
+                      : "Maksimal 1000 baris; persempit lewat filter."
+                    : undefined
+                }
+              >
+                Pilih semua {resultTotalItems} hasil{filterActive ? " filter" : ""}
+              </Button>
+            ) : null}
+          </div>
+        }
+        addButton={
+          <StockOpnameAddItemButton
+            sessionId={id}
+            coordinators={coordinators}
+            onSubmit={handleResultCreate}
+            disabled={session.status === "COMPLETED" || session.status === "CANCELLED"}
           />
-          {resultsFailed && results.length === 0 ? (
-            <ErrorState
-              message="Daftar hasil gagal dimuat."
-              onRetry={() => void loadData()}
-              retrying={loading}
-            />
-          ) : (
-          <StockOpnameTable
-            columns={createResultColumns(
-              handleResultUpdate,
-              handleResultDelete,
-              handleMoveRequest,
-              isResultReadOnly,
-              openItemFactor,
-            )}
-            data={results}
-            selectable
-            rowSelection={rowSelection}
-            onRowSelectionChange={handleRowSelectionChange}
-            getRowId={(item) => String(item.id)}
-            filters={
-              <div className="flex flex-wrap gap-2">
-                <select
-                  aria-label="Filter koordinator"
-                  className="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-background [&>option]:text-foreground"
-                  value={filterCoordinatorId}
-                  onChange={(event) => handleCoordinatorFilter(event.target.value)}
-                >
-                  <option value="">Semua koordinator</option>
-                  {coordinators.map((coordinator) => (
-                    <option key={coordinator.id} value={coordinator.id}>
-                      {coordinator.code}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Filter rak"
-                  className="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-background [&>option]:text-foreground"
-                  value={filterRackId}
-                  onChange={(event) => handleRackFilter(event.target.value)}
-                  disabled={rackOptions.length === 0}
-                >
-                  <option value="">Semua rak</option>
-                  {rackOptions.map((rack) => (
-                    <option key={rack.id} value={rack.id}>
-                      {filterCoordinatorId
-                        ? rack.name
-                        : `${rack.name} - ${coordinatorCodeById.get(rack.coordinatorId) ?? ""}`}
-                    </option>
-                  ))}
-                </select>
-                {resultTotalItems > 0 ? (
-                  <Button
-                    variant={selectionMode === "filter" ? "default" : "outline"}
-                    size="sm"
-                    onClick={activateFilterMode}
-                    disabled={selectionMode === "filter" || resultTotalItems > 1000}
-                    title={
-                      resultTotalItems > 1000
-                        ? filterActive
-                          ? "Persempit filter; maksimal 1000 baris."
-                          : "Maksimal 1000 baris; persempit lewat filter."
-                        : undefined
-                    }
-                  >
-                    Pilih semua {resultTotalItems} hasil{filterActive ? " filter" : ""}
-                  </Button>
-                ) : null}
-              </div>
-            }
-            addButton={
-              <StockOpnameAddItemButton
-                sessionId={id}
-                coordinators={coordinators}
-                onSubmit={handleResultCreate}
-                disabled={session.status === "COMPLETED" || session.status === "CANCELLED"}
-              />
-            }
-            onSearch={setResultSearchInput}
-            searchValue={resultSearchInput}
-            loading={loading}
-            page={resultPage}
-            totalPages={resultTotalPages}
-            onPageChange={handleResultPageChange}
-          />
-          )}
-        </CardContent>
-      </Card>
-      <AuditTimeline
-        key={`session-${id}`}
-        sessionId={id}
-        refreshKey={auditRefresh}
-        onOpenResult={openResultFromAudit}
+        }
+        searchValue={resultSearchInput}
+        onSearch={setResultSearchInput}
+        page={resultPage}
+        totalPages={resultTotalPages}
+        onPageChange={handleResultPageChange}
       />
+      <AuditSection sessionId={id} refreshKey={auditRefresh} onOpenResult={openResultFromAudit} />
       {moveState ? (
         <StockOpnameMoveDialog
           open
