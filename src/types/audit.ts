@@ -58,4 +58,9 @@ export type AuditTimelineItem =
       note: string;
       created_at: string;
       item_count: number;
+      factor_before?: number;
+      factor_after?: number;
+      source_rak_name?: string;
+      target_rak_name?: string;
+      merged_count?: number;
     };

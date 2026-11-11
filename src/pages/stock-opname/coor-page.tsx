@@ -579,6 +579,16 @@ export default function CoorPage() {
           : undefined;
   const filterActive = resultSearch.trim() !== "" || filterRackId !== "";
 
+  // Jumps from an audit entry to the matching row in the results table.
+  const openResultFromAudit = (term: string) => {
+    setResultSearchInput(term);
+    setResultSearch(term);
+    setResultPage(1);
+    requestAnimationFrame(() => {
+      document.getElementById("stock-opname-results")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
   const openItemFactor = (item: { id: number; name: string; qtyFactor: QtyFactor }) => {
     setFactorTarget({
       scope: "item",
@@ -838,7 +848,7 @@ export default function CoorPage() {
           />
         </CardContent>
       </Card>
-      <Card className="my-5">
+      <Card className="my-5" id="stock-opname-results">
         <CardHeader>
           <CardTitle>Data Barang Stock Opname</CardTitle>
           <CardDescription>Data terkini hasil koreksi admin</CardDescription>
@@ -926,7 +936,12 @@ export default function CoorPage() {
           )}
         </CardContent>
       </Card>
-      <AuditTimeline key={`coordinator-${id}`} coordinatorId={id} refreshKey={auditRefresh} />
+      <AuditTimeline
+        key={`coordinator-${id}`}
+        coordinatorId={id}
+        refreshKey={auditRefresh}
+        onOpenResult={openResultFromAudit}
+      />
       {moveState ? (
         <StockOpnameMoveDialog
           open

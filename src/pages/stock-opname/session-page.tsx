@@ -516,6 +516,16 @@ export default function SessionPage() {
 
   const filterActive = resultSearch.trim() !== "" || filterCoordinatorId !== "" || filterRackId !== "";
 
+  // Jumps from an audit entry to the matching row in the results table.
+  const openResultFromAudit = (term: string) => {
+    setResultSearchInput(term);
+    setResultSearch(term);
+    setResultPage(1);
+    requestAnimationFrame(() => {
+      document.getElementById("stock-opname-results")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
   const openItemFactor = (item: StockOpname) => {
     setFactorTarget({
       scope: "item",
@@ -819,7 +829,7 @@ export default function SessionPage() {
         </CardContent>
       </Card>
       <SellSummaryCard sessionId={id} refreshKey={summaryRefresh} />
-      <Card className="my-5">
+      <Card className="my-5" id="stock-opname-results">
         <CardHeader>
           <CardTitle>Data Barang Stock Opname</CardTitle>
           <CardDescription>Data terkini hasil koreksi admin</CardDescription>
@@ -922,7 +932,12 @@ export default function SessionPage() {
           )}
         </CardContent>
       </Card>
-      <AuditTimeline key={`session-${id}`} sessionId={id} refreshKey={auditRefresh} />
+      <AuditTimeline
+        key={`session-${id}`}
+        sessionId={id}
+        refreshKey={auditRefresh}
+        onOpenResult={openResultFromAudit}
+      />
       {moveState ? (
         <StockOpnameMoveDialog
           open

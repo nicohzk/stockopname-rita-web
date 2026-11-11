@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Notice, RetryButton } from "@/components/ui/notice";
 import { formatDateTime } from "@/lib/format-date";
 import { getAudits, getAuditTimeline } from "@/services/audit.service";
 import type { AuditAction, AuditData, AuditTimelineItem } from "@/types/audit";
-import { describeEntry } from "./audit-describe";
+import { describeEntry, factorName } from "./audit-describe";
 
 type Props = {
   sessionId?: number;
@@ -16,6 +16,7 @@ type Props = {
   refreshKey?: number;
   title?: string;
   description?: string;
+  onOpenResult?: (term: string) => void;
 };
 
 type TimelineBatch = Extract<AuditTimelineItem, { kind: "batch" }>;
@@ -91,6 +92,35 @@ function ActionBadge({ action }: { action: AuditAction }) {
   );
 }
 
+function RowShell({ children, nested = false }: { children: ReactNode; nested?: boolean }) {
+  return (
+    <div
+      className={`border-b py-2 last:border-b-0 hover:bg-muted/40 ${
+        nested ? "" : "-mx-2 rounded-md px-2"
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function RowMeta({
+  item,
+  extra,
+}: {
+  item: { created_at: string; actor: string; action: AuditAction };
+  extra?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      <span>{formatDateTime(item.created_at)}</span>
+      <span className="font-medium text-foreground">{item.actor || "-"}</span>
+      <ActionBadge action={item.action} />
+      {extra}
+    </div>
+  );
+}
+
 function Pager({
   page,
   totalPages,
@@ -122,83 +152,86 @@ function Pager({
   );
 }
 
-function AuditRow({ entry }: { entry: TimelineEntry }) {
+/** Sentence for a batch row; empty when the batch has no useful metadata. */
+function batchSummary(batch: TimelineBatch): string {
+  const parts: string[] = [];
+  if (batch.action === "MOVE") {
+    if (batch.source_rak_name && batch.target_rak_name) {
+      parts.push(`${batch.source_rak_name} → ${batch.target_rak_name}`);
+    }
+    if (batch.merged_count) {
+      parts.push(`${batch.merged_count} digabung`);
+    }
+  } else if (batch.action === "UPDATE" && batch.factor_after !== undefined) {
+    const to = factorName(batch.factor_after);
+    parts.push(
+      batch.factor_before !== undefined ? `faktor ${factorName(batch.factor_before)} → ${to}` : `faktor menjadi ${to}`,
+    );
+  }
+  return parts.join(" · ");
+}
+
+function AuditRow({ entry, onOpenResult }: { entry: TimelineEntry; onOpenResult?: (term: string) => void }) {
   const { product, change } = describeEntry(entry);
+  const term = entry.after?.barcode || entry.before?.barcode || entry.after?.plu || entry.before?.plu;
   return (
-    <div className="flex flex-col gap-1 border-b py-2 last:border-b-0">
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <span>{formatDateTime(entry.created_at)}</span>
-        <span className="font-medium text-foreground">{entry.actor || "-"}</span>
-        <ActionBadge action={entry.action} />
-      </div>
+    <RowShell nested>
+      <RowMeta item={entry} />
       <p className="text-sm">
-        <span className="font-medium">{product}</span>
+        {onOpenResult && term ? (
+          <button
+            type="button"
+            title="Lihat di daftar hasil"
+            onClick={() => onOpenResult(term)}
+            className="font-medium underline-offset-2 hover:underline"
+          >
+            {product}
+          </button>
+        ) : (
+          <span className="font-medium">{product}</span>
+        )}
         <span className="text-muted-foreground"> · {change}</span>
       </p>
       {entry.note ? <p className="text-xs text-muted-foreground">Catatan: {entry.note}</p> : null}
-    </div>
+    </RowShell>
   );
 }
 
-function BatchCard({
+function BatchRow({
   batch,
   expanded,
-  loading,
-  error,
-  entries,
-  page,
-  totalPages,
   onToggle,
-  onPageChange,
+  children,
 }: {
   batch: TimelineBatch;
   expanded: boolean;
-  loading: boolean;
-  error?: string;
-  entries: TimelineEntry[];
-  page: number;
-  totalPages: number;
   onToggle: () => void;
-  onPageChange: (page: number) => void;
+  children: ReactNode;
 }) {
+  const summary = batchSummary(batch);
   return (
-    <div className="rounded-md border">
-      <button
-        type="button"
-        aria-expanded={expanded}
-        onClick={onToggle}
-        className="flex w-full flex-wrap items-center gap-2 px-2 py-2 text-left text-sm"
-      >
-        {expanded ? (
-          <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-        ) : (
-          <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-        )}
-        <ActionBadge action={batch.action} />
-        <span className="font-medium">{batch.item_count} hasil</span>
-        <span>{batch.actor || "-"}</span>
-        {batch.note ? <span className="truncate text-muted-foreground">{batch.note}</span> : null}
-        <span className="ml-auto text-xs text-muted-foreground">{formatDateTime(batch.created_at)}</span>
-      </button>
-      {expanded ? (
-        <div className="border-t px-2 py-2">
-          {loading ? (
-            <LoadingSpinner message="Memuat detail perubahan..." />
-          ) : error ? (
-            <p className="text-sm text-destructive">{error}</p>
-          ) : entries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Tidak ada item pada perubahan ini.</p>
-          ) : (
-            <>
-              {entries.map((entry) => (
-                <AuditRow key={entry.id} entry={entry} />
-              ))}
-              <Pager page={page} totalPages={totalPages} disabled={loading} onChange={onPageChange} />
-            </>
-          )}
-        </div>
-      ) : null}
-    </div>
+    <RowShell>
+      <RowMeta
+        item={batch}
+        extra={<span className="font-medium text-foreground">{batch.item_count} hasil</span>}
+      />
+      <div className="flex items-start gap-2">
+        <p className="min-w-0 flex-1 text-sm">
+          {summary || "Perubahan massal"}
+          {batch.note ? <span className="text-muted-foreground"> · {batch.note}</span> : null}
+        </p>
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-label={expanded ? "Tutup detail" : "Buka detail"}
+          onClick={onToggle}
+          className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+        </button>
+      </div>
+      {expanded ? <div className="mt-2 ml-1 border-l pl-3">{children}</div> : null}
+    </RowShell>
   );
 }
 
@@ -209,6 +242,7 @@ export default function AuditTimeline({
   refreshKey = 0,
   title = "Riwayat Perubahan",
   description = "Setiap koreksi hasil SO dicatat di sini.",
+  onOpenResult,
 }: Props) {
   const [items, setItems] = useState<AuditTimelineItem[]>([]);
   const [page, setPage] = useState(1);
@@ -331,26 +365,37 @@ export default function AuditTimeline({
             </p>
           ) : null
         ) : (
-          <div className="space-y-2">
+          <div>
             {groupByDay(items, (item) => item.created_at).map((group) => (
-              <div key={group.key} className="space-y-1">
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{group.label}</h4>
+              <div key={group.key}>
+                <h4 className="pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {group.label}
+                </h4>
                 {group.items.map((item) =>
                   item.kind === "batch" ? (
-                    <BatchCard
+                    <BatchRow
                       key={`batch-${item.batch_id}`}
                       batch={item}
                       expanded={expandedBatch === item.batch_id}
-                      loading={batchLoading}
-                      error={batchError}
-                      entries={batchEntries}
-                      page={batchPage}
-                      totalPages={batchTotalPages}
                       onToggle={() => toggleBatch(item.batch_id)}
-                      onPageChange={setBatchPage}
-                    />
+                    >
+                      {batchLoading ? (
+                        <LoadingSpinner message="Memuat detail perubahan..." />
+                      ) : batchError ? (
+                        <p className="text-sm text-destructive">{batchError}</p>
+                      ) : batchEntries.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Tidak ada item pada perubahan ini.</p>
+                      ) : (
+                        <>
+                          {batchEntries.map((entry) => (
+                            <AuditRow key={entry.id} entry={entry} onOpenResult={onOpenResult} />
+                          ))}
+                          <Pager page={batchPage} totalPages={batchTotalPages} disabled={batchLoading} onChange={setBatchPage} />
+                        </>
+                      )}
+                    </BatchRow>
                   ) : (
-                    <AuditRow key={`entry-${item.id}`} entry={item} />
+                    <AuditRow key={`entry-${item.id}`} entry={item} onOpenResult={onOpenResult} />
                   ),
                 )}
               </div>
