@@ -1,6 +1,13 @@
-import type { AuditData, AuditEntry } from "@/types/audit";
+import type { AuditAction, AuditData } from "@/types/audit";
 
 export type ChangeKind = "create" | "delete" | "move" | "qty" | "factor" | "other";
+
+/** Minimal payload shared by AuditEntry and the timeline response. */
+type ChangeEntry = {
+  action: AuditAction;
+  before: AuditData | null;
+  after: AuditData | null;
+};
 
 const quantityFormatter = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 });
 
@@ -29,7 +36,7 @@ export function factorName(value: number): string {
  * Works out what really changed from the audit payload instead of trusting the
  * coarse action code: a MOVE also carries quantity changes when rows merge.
  */
-export function classify(entry: AuditEntry): ChangeKind {
+export function classify(entry: ChangeEntry): ChangeKind {
   if (!entry.after) return "delete";
   if (!entry.before) return "create";
   if (entry.before.rak_id !== entry.after.rak_id) return "move";
@@ -44,7 +51,7 @@ export type ChangeDescription = {
   change: string;
 };
 
-export function describeEntry(entry: AuditEntry): ChangeDescription {
+export function describeEntry(entry: ChangeEntry): ChangeDescription {
   const kind = classify(entry);
   const before = entry.before;
   const after = entry.after;
