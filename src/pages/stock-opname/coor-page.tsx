@@ -486,9 +486,9 @@ export default function CoorPage() {
     setError(undefined);
     setResultPage(nextPage);
   };
-  const handleOpenUploadReport = async (uploadId: number) => {
+  const handleOpenUploadReport = async (uploadId: number, includeCarton = false) => {
     try {
-      await openUploadReport(uploadId);
+      await openUploadReport(uploadId, includeCarton);
     } catch (mutationError) {
       showToast(
         mutationError instanceof Error ? mutationError.message : "Gagal membuat PDF upload.",

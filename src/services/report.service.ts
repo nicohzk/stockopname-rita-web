@@ -12,8 +12,8 @@ export async function openCoordinatorUploadSummary(id: number) {
   return openReport(`/stockopname/coordinators/${id}/uploads/pdf`);
 }
 
-export async function openUploadReport(id: number) {
-  return openReport(`/stockopname/uploads/${id}/pdf`);
+export async function openUploadReport(id: number, includeCarton = false) {
+  return openReport(`/stockopname/uploads/${id}/pdf${includeCarton ? "?include_carton=true" : ""}`);
 }
 
 export async function downloadSessionExcel(id: number, filename?: string) {
