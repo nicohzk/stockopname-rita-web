@@ -25,7 +25,7 @@ export default function AdminActorButton() {
         type="button"
         variant="ghost"
         size="sm"
-        className="w-full justify-start text-slate-300 hover:bg-slate-800 hover:text-white"
+        className="w-full justify-start text-slate-700 hover:bg-slate-200/70 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
         onClick={() => {
           setName(getAdminActor());
           setOpen(true);

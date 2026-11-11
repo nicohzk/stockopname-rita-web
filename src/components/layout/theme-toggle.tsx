@@ -26,7 +26,7 @@ export default function ThemeToggle() {
       variant="ghost"
       size="sm"
       onClick={toggle}
-      className="w-full justify-start gap-2 px-2 text-slate-300 hover:bg-slate-800 hover:text-white group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+      className="w-full justify-start gap-2 px-2 text-slate-700 hover:bg-slate-200/70 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
       aria-label={isDark ? "Aktifkan mode terang" : "Aktifkan mode gelap"}
     >
       {isDark ? <SunIcon /> : <MoonIcon />}
