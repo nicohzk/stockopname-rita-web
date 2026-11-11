@@ -89,7 +89,7 @@ const SECTION_LABELS: Record<PageSection, string> = {
   progress: "progres rak",
   racks: "daftar rak",
   coordinators: "daftar koordinator",
-  uploads: "riwayat upload",
+  uploads: "upload",
 };
 
 function describeSections(sections: PageSection[]): string {
@@ -797,7 +797,7 @@ export default function CoorPage() {
       </div>
       <Card className="my-5">
         <CardHeader>
-          <CardTitle>Riwayat Upload</CardTitle>
+          <CardTitle>Daftar Upload</CardTitle>
           <CardDescription>Laporan upload memakai hasil terkini; koreksi admin ikut tercermin.</CardDescription>
           <CardAction>
             <Button
