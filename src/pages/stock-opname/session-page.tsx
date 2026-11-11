@@ -1,7 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
-import type { RowSelectionState, Updater } from "@tanstack/react-table";
-import { Separator } from "@/components/ui/separator";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,7 +12,6 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { Notice, ErrorState, RetryButton } from "@/components/ui/notice";
 import { errorMessage, refreshWarningMessage } from "@/lib/errors";
-import { formatCurrency, formatQty } from "@/lib/format-currency";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Printer } from "lucide-react";
 import { AlertDialog } from "@/components/ui/alert-dialog";
@@ -24,59 +21,35 @@ import { getCoordinators } from "@/services/coordinator.service";
 import { getRackProgress, getRacks } from "@/services/rack.service";
 import type { Rack } from "@/types/rack";
 import {
-  createStockOpname,
-  deleteStockOpname,
   getSellSummary,
-  getStockOpnames,
-  moveStockOpname,
-  setQtyFactor,
-  updateStockOpname,
 } from "@/services/stock-opname.service";
-import type {
-  ResultSelectionItem,
-  QtyFactor,
-  QtyFactorScope,
-  SelectionMode,
-  SellSummaryGroup,
-} from "@/types/stock-opname";
-import ResultSelectionBar from "./result/result-selection-bar";
+import type { SellSummaryGroup } from "@/types/stock-opname";
+import { useResultTable } from "./hooks/use-result-table";
+import ResultCard from "./result/result-card";
 import QtyFactorDialog from "./result/qty-factor-dialog";
 import SellSummaryCard from "./result/sell-summary-card";
 import StockOpnameAddItemButton from "./result/so-add-item-btn";
 import StockOpnameMoveDialog from "./result/so-move-dialog";
-import AuditTimeline from "./audit/audit-timeline";
+import AuditSection from "./audit/audit-section";
 import { CoordinatorTable } from "./coordinator/coordinator-table";
 import { createColumns as createCoordinatorColumns } from "./coordinator/coordinator-table-column";
-import { StockOpnameTable } from "./result/so-table";
-import { createColumns as createResultColumns } from "./result/so-table-column";
 import ProductMasterCard from "./session/product/product-master-card";
 import CoordinatorAddButton from "./session/coordinator-add-btn";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import type {
-  StockOpname,
-  StockOpnameCreateRequest,
-  StockOpnameUpdateRequest,
-} from "@/types/stock-opname";
+import type { StockOpname } from "@/types/stock-opname";
 import SessionExportMenu from "./session-export-menu";
-import { StatusBadge } from "@/components/ui/status-badge";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import PageHeader from "./session/page-header";
+import SummaryCards from "./session/summary-cards";
 
 // Each part of the page loads independently: one failing request must not take
-// the others down with it.
-type PageSection = "session" | "coordinators" | "results" | "progress" | "productCount" | "sellTotal";
+// the others down with it. The result table is not listed here: it loads and
+// refreshes on its own through useResultTable.
+type PageSection = "session" | "coordinators" | "progress" | "productCount" | "sellTotal";
 
 const SECTION_LABELS: Record<PageSection, string> = {
   session: "sesi",
   coordinators: "koordinator",
-  results: "daftar hasil",
   progress: "progres rak",
   productCount: "jumlah produk",
   sellTotal: "nilai jual",
@@ -96,20 +69,10 @@ export default function SessionPage() {
   const [coordinators, setCoordinators] = useState<
     Awaited<ReturnType<typeof getCoordinators>>
   >([]);
-  const [results, setResults] = useState<
-    Awaited<ReturnType<typeof getStockOpnames>>["data"]
-  >([]);
   const [progress, setProgress] = useState<
     Awaited<ReturnType<typeof getRackProgress>>
   >([]);
   const [racks, setRacks] = useState<Rack[]>([]);
-  const [filterCoordinatorId, setFilterCoordinatorId] = useState("");
-  const [filterRackId, setFilterRackId] = useState("");
-  const [resultPage, setResultPage] = useState(1);
-  const [resultSearch, setResultSearch] = useState("");
-  const [resultSearchInput, setResultSearchInput] = useState("");
-  const [resultTotalPages, setResultTotalPages] = useState(1);
-  const [resultTotalItems, setResultTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [refreshWarning, setRefreshWarning] = useState<string>();
@@ -122,44 +85,60 @@ export default function SessionPage() {
   const [deleteCode, setDeleteCode] = useState("");
   const [deleteError, setDeleteError] = useState<string>();
   const [deleting, setDeleting] = useState(false);
-  const [moveState, setMoveState] = useState<{
-    sourceRackId: number;
-    sourceRackName: string;
-    resultIds?: number[];
-    itemCount?: number;
-  }>();
   const [auditRefresh, setAuditRefresh] = useState(0);
   const [summaryRefresh, setSummaryRefresh] = useState(0);
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [selectedItems, setSelectedItems] = useState<Map<number, ResultSelectionItem>>(new Map());
-  const [selectionMode, setSelectionMode] = useState<SelectionMode>("manual");
-  const [factorTarget, setFactorTarget] = useState<{
-    scope: QtyFactorScope;
-    scopeId?: number;
-    label: string;
-    itemCount: number;
-    currentFactor?: QtyFactor;
-    mixed?: boolean;
-    resultIds?: number[];
-  }>();
+
+  const coordinatorStatusById = new Map(
+    coordinators.map((coordinator) => [coordinator.id, coordinator.status]),
+  );
+  const isResultReadOnly = (item: StockOpname) => {
+    const status = coordinatorStatusById.get(item.coordinatorId);
+    return session?.status !== "IN_PROGRESS" || status === "COMPLETED" || status === "CANCELLED";
+  };
+
+  // Mutasi memanggil penyegaran halaman lewat ref: refreshAfterMutation baru ada
+  // setelah data pertama dimuat, sedangkan hook perlu callback-nya sejak awal.
+  const refreshRef = useRef<() => void>(() => {});
+  const table = useResultTable({
+    sessionId: id,
+    sessionStatus: session?.status,
+    coordinators,
+    racks,
+    bulkScope: { scope: "session", label: session?.code ?? "Sesi" },
+    moveBlockedMessages: {
+      session: "Sesi sudah final.",
+      coordinator: "Koordinator sudah final.",
+    },
+    onChanged: () => {
+      setAuditRefresh((value) => value + 1);
+      setSummaryRefresh((value) => value + 1);
+      refreshRef.current();
+    },
+    showToast,
+  });
+  const {
+    selectionMode,
+    activateFilterMode,
+    openResultFromAudit,
+    moveState,
+    closeMove,
+    handleMoveSubmit,
+    factorTarget,
+    closeFactor,
+    handleFactorSubmit,
+    handleResultCreate,
+  } = table;
 
   const fetchPageData = useCallback(
     () =>
       Promise.allSettled([
         getSession(id),
         getCoordinators(id),
-        getStockOpnames({
-          sessionId: id,
-          coordinatorId: filterCoordinatorId ? Number(filterCoordinatorId) : undefined,
-          rakId: filterRackId ? Number(filterRackId) : undefined,
-          page: resultPage,
-          search: resultSearch,
-        }),
         getRackProgress({ sessionId: id }),
         getProductCount(id),
         getSellSummary(id, "session"),
       ]),
-    [id, filterCoordinatorId, filterRackId, resultPage, resultSearch],
+    [id],
   );
 
   // Applies whatever actually arrived and reports which sections failed, so one
@@ -168,7 +147,6 @@ export default function SessionPage() {
     ([
       sessionOutcome,
       coordinatorsOutcome,
-      resultsOutcome,
       progressOutcome,
       productCountOutcome,
       sellTotalOutcome,
@@ -185,15 +163,6 @@ export default function SessionPage() {
         setCoordinators(coordinatorsOutcome.value);
       } else {
         failed.push("coordinators");
-      }
-
-      if (resultsOutcome.status === "fulfilled") {
-        setResults(resultsOutcome.value.data);
-        setResultPage(resultsOutcome.value.pagination.page);
-        setResultTotalPages(resultsOutcome.value.pagination.total_pages || 1);
-        setResultTotalItems(resultsOutcome.value.pagination.total_items ?? 0);
-      } else {
-        failed.push("results");
       }
 
       if (progressOutcome.status === "fulfilled") {
@@ -262,42 +231,10 @@ export default function SessionPage() {
     }
   };
 
-  const clearSelection = () => {
-    setRowSelection({});
-    setSelectedItems(new Map());
-    setSelectionMode("manual");
-  };
-
-  const handleRowSelectionChange = (updater: Updater<RowSelectionState>) => {
-    const next = typeof updater === "function" ? updater(rowSelection) : updater;
-    if (Object.keys(next).length > 500) {
-      showToast("Maksimal 500 item untuk selection manual.", "error");
-      return;
-    }
-    setRowSelection(next);
-    setSelectedItems((previous) => {
-      const updated = new Map(previous);
-      for (const id of updated.keys()) {
-        if (!next[String(id)]) updated.delete(id);
-      }
-      for (const item of results) {
-        if (next[String(item.id)]) {
-          updated.set(item.id, {
-            id: item.id,
-            rackId: item.rackId,
-            coordinatorId: item.coordinatorId,
-            qtyFactor: item.qtyFactor,
-          });
-        } else {
-          updated.delete(item.id);
-        }
-      }
-      return updated;
-    });
-    if (Object.keys(next).length > 0) {
-      setSelectionMode("manual");
-    }
-  };
+  // Hook mutasi memanggil callback ini; ref menunjuk versi terbaru tiap render.
+  useEffect(() => {
+    refreshRef.current = () => void refreshAfterMutation();
+  });
 
   const refreshProductCount = async () => {
     try {
@@ -357,19 +294,6 @@ export default function SessionPage() {
     // Filter options only; a failure must not block the result table.
     getRacks({ sessionId: id }).then(setRacks).catch(() => undefined);
   }, [id]);
-  useEffect(() => {
-    if (resultSearchInput === resultSearch) return;
-    const timer = window.setTimeout(() => {
-      setLoading(true);
-      setError(undefined);
-      setResultSearch(resultSearchInput);
-      setResultPage(1);
-      setRowSelection({});
-      setSelectedItems(new Map());
-      setSelectionMode("manual");
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [resultSearchInput, resultSearch]);
 
   const changeStatus = async (status: "COMPLETED" | "CANCELLED") => {
     try {
@@ -384,236 +308,10 @@ export default function SessionPage() {
     showToast(`Sesi berhasil ${status === "COMPLETED" ? "diselesaikan" : "dibatalkan"}.`);
     void refreshAfterMutation();
   };
-  const handleResultUpdate = async (
-    resultId: number,
-    data: StockOpnameUpdateRequest,
-  ) => {
-    try {
-      await updateStockOpname(resultId, data);
-    } catch (mutationError) {
-      showToast(
-        errorMessage(mutationError, "Gagal memperbarui data stock opname."),
-        "error",
-      );
-      throw mutationError;
-    }
-    showToast("Data stock opname berhasil diperbarui.");
-    clearSelection();
-    setAuditRefresh((value) => value + 1);
-    setSummaryRefresh((value) => value + 1);
-    void refreshAfterMutation();
-  };
-  const handleResultDelete = async (resultId: number) => {
-    try {
-      await deleteStockOpname(resultId);
-    } catch (mutationError) {
-      showToast(
-        errorMessage(mutationError, "Gagal menghapus data stock opname."),
-        "error",
-      );
-      throw mutationError;
-    }
-    showToast("Data stock opname berhasil dihapus.");
-    clearSelection();
-    setAuditRefresh((value) => value + 1);
-    setSummaryRefresh((value) => value + 1);
-    void refreshAfterMutation();
-  };
-  const handleResultCreate = async (data: StockOpnameCreateRequest) => {
-    try {
-      await createStockOpname(data);
-    } catch (mutationError) {
-      showToast(errorMessage(mutationError, "Gagal menambahkan item."), "error");
-      throw mutationError;
-    }
-    showToast("Item berhasil ditambahkan.");
-    clearSelection();
-    setAuditRefresh((value) => value + 1);
-    setSummaryRefresh((value) => value + 1);
-    void refreshAfterMutation();
-  };
 
-  const handleMoveRequest = (item: { rackId: number; rackName: string; id: number }) => {
-    setMoveState({
-      sourceRackId: item.rackId,
-      sourceRackName: item.rackName,
-      resultIds: [item.id],
-      itemCount: 1,
-    });
-  };
-
-  const handleMoveSubmit = async (targetRakId: number, note: string) => {
-    if (!moveState) return;
-    const result = await moveStockOpname({
-      sourceRakId: moveState.sourceRackId,
-      targetRakId,
-      resultIds: moveState.resultIds,
-      note,
-    });
-    clearSelection();
-    setAuditRefresh((value) => value + 1);
-    setSummaryRefresh((value) => value + 1);
-    showToast(
-      `${result.data.moved_count} item dipindah${result.data.merged_count ? `, ${result.data.merged_count} digabung` : ""}.${
-        result.data.reopened_rack_id ? " Upload asal dilepas dari rak sumber; rak bisa diupload ulang." : ""
-      }`,
-    );
-    void refreshAfterMutation();
-  };
-
-  const handleCoordinatorFilter = (value: string) => {
-    setLoading(true);
-    setError(undefined);
-    setFilterCoordinatorId(value);
-    setFilterRackId("");
-    setResultPage(1);
-    clearSelection();
-  };
-  const handleRackFilter = (value: string) => {
-    setLoading(true);
-    setError(undefined);
-    setFilterRackId(value);
-    setResultPage(1);
-    clearSelection();
-  };
-  const handleResultPageChange = (nextPage: number) => {
-    setLoading(true);
-    setError(undefined);
-    setResultPage(nextPage);
-  };
   const coordinatorCodeById = new Map(coordinators.map((coordinator) => [coordinator.id, coordinator.code]));
-  const coordinatorStatusById = new Map(coordinators.map((coordinator) => [coordinator.id, coordinator.status]));
-  const isResultReadOnly = (item: StockOpname) => {
-    const status = coordinatorStatusById.get(item.coordinatorId);
-    return session?.status !== "IN_PROGRESS" || status === "COMPLETED" || status === "CANCELLED";
-  };
-
-  const selectedItemsList = Array.from(selectedItems.values());
-  const selectedCount = selectedItemsList.length;
-  const selectedRackId = selectedItemsList.length > 0
-    ? selectedItemsList.every((item) => item.rackId === selectedItemsList[0].rackId)
-      ? selectedItemsList[0].rackId
-      : undefined
-    : undefined;
-  const selectedRack = selectedRackId !== undefined
-    ? racks.find((rack) => rack.id === selectedRackId)
-    : undefined;
-  const mixedSelectedFactor = new Set(selectedItemsList.map((item) => item.qtyFactor)).size > 1;
-  const sourceCoordinatorStatus = selectedRack
-    ? coordinatorStatusById.get(selectedRack.coordinatorId)
-    : undefined;
-  const moveDisabledReason = selectedCount === 0
-    ? "Pilih item terlebih dahulu."
-    : selectedRackId === undefined
-      ? "Pilih item dari satu rak untuk memindahkan."
-      : !selectedRack
-        ? "Rak sumber tidak ditemukan."
-        : session?.status !== "IN_PROGRESS"
-          ? "Sesi sudah final."
-          : sourceCoordinatorStatus === "COMPLETED" || sourceCoordinatorStatus === "CANCELLED"
-            ? "Koordinator sudah final."
-            : undefined;
-
-  const filterActive = resultSearch.trim() !== "" || filterCoordinatorId !== "" || filterRackId !== "";
-
-  // Jumps from an audit entry to the matching row in the results table.
-  const openResultFromAudit = (term: string) => {
-    setResultSearchInput(term);
-    setResultSearch(term);
-    setResultPage(1);
-    requestAnimationFrame(() => {
-      document.getElementById("stock-opname-results")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  };
-
-  const openItemFactor = (item: StockOpname) => {
-    setFactorTarget({
-      scope: "item",
-      scopeId: item.id,
-      label: item.name,
-      itemCount: 1,
-      currentFactor: item.qtyFactor,
-    });
-  };
-
-  const openSelectedFactor = () => {
-    setFactorTarget({
-      scope: "items",
-      resultIds: selectedItemsList.map((item) => item.id),
-      label: `${selectedCount} item terpilih`,
-      itemCount: selectedCount,
-      mixed: mixedSelectedFactor,
-    });
-  };
-
-  const activateFilterMode = () => {
-    setRowSelection({});
-    setSelectedItems(new Map());
-    setSelectionMode("filter");
-  };
-
-  const openBulkFactor = () => {
-    setFactorTarget(
-      filterActive
-        ? {
-            scope: "filter",
-            label: "Semua hasil filter",
-            itemCount: resultTotalItems,
-            mixed: true,
-          }
-        : {
-            scope: "session",
-            label: session?.code ?? "Sesi",
-            itemCount: resultTotalItems,
-          },
-    );
-  };
-
-  const openSelectedMove = () => {
-    if (selectedCount === 0 || !selectedRack || moveDisabledReason) return;
-    setMoveState({
-      sourceRackId: selectedRack.id,
-      sourceRackName: selectedRack.name,
-      resultIds: selectedItemsList.map((item) => item.id),
-      itemCount: selectedCount,
-    });
-  };
-
-  const handleFactorSubmit = async (factor: QtyFactor, note: string) => {
-    if (!factorTarget) return;
-    try {
-      const result = await setQtyFactor(id, {
-        scope: factorTarget.scope,
-        scopeId: factorTarget.scopeId,
-        resultIds: factorTarget.resultIds,
-        filter: factorTarget.scope === "filter"
-          ? {
-              search: resultSearch.trim() || undefined,
-              coordinatorId: filterCoordinatorId ? Number(filterCoordinatorId) : undefined,
-              rakId: filterRackId ? Number(filterRackId) : undefined,
-            }
-          : undefined,
-        qtyFactor: factor,
-        note,
-      });
-      showToast(
-        result.updated_count === 0
-          ? "Tidak ada perubahan faktor."
-          : `${result.updated_count} item berhasil diubah faktornya.`,
-      );
-    } catch (mutationError) {
-      showToast(errorMessage(mutationError, "Gagal mengubah faktor qty."), "error");
-      throw mutationError;
-    }
-    clearSelection();
-    setFactorTarget(undefined);
-    setAuditRefresh((value) => value + 1);
-    setSummaryRefresh((value) => value + 1);
-    void refreshAfterMutation();
-  };
-
   const rackOptions = racks.filter(
-    (rack) => !filterCoordinatorId || rack.coordinatorId === Number(filterCoordinatorId),
+    (rack) => !table.coordinatorFilter || rack.coordinatorId === Number(table.coordinatorFilter),
   );
   const activeCoordinatorCount = coordinators.filter(
     (coordinator) => coordinator.status === "IN_PROGRESS",
@@ -649,7 +347,6 @@ export default function SessionPage() {
     );
   const rack = progress[0];
   const progressFailed = failedSections.includes("progress");
-  const resultsFailed = failedSections.includes("results");
   const sellTotalFailed = failedSections.includes("sellTotal");
   const progressPercent = rack?.rackAssigned
     ? Math.round((rack.rackCompleted / rack.rackAssigned) * 100)
@@ -673,27 +370,12 @@ export default function SessionPage() {
           }
         />
       ) : null}
-      <div className="mb-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink render={<Link to="/stock-opname" />} className="text-xs">
-                    Stock Opname
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage className="text-xs">{session.code}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-            <h1 className="text-2xl font-bold mt-2">{session.code}</h1>
-            <StatusBadge className="my-2" status={session.status} />
-            <p>{session.location}</p>
-          </div>
-          <div className="flex flex-wrap gap-2 sm:gap-5">
+      <PageHeader
+        title={session.code}
+        status={session.status}
+        subtitle={<p>{session.location}</p>}
+        actions={
+          <>
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="default"
@@ -720,68 +402,21 @@ export default function SessionPage() {
               )}
             </div>
             <SessionExportMenu sessionId={id} sessionCode={session.code} />
-            <Button
-              variant="secondary"
-              onClick={() => navigate("/stock-opname")}
-            >
+            <Button variant="secondary" onClick={() => navigate("/stock-opname")}>
               Kembali
             </Button>
-          </div>
-        </div>
-        <Separator className="mt-2" />
-      </div>
-      <div className="mb-5 grid gap-3 sm:grid-cols-2 sm:gap-5 xl:grid-cols-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Progres</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {progressFailed ? "—" : `${progressPercent}%`}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Status Rak</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {progressFailed
-                ? "—"
-                : `${rack?.rackCompleted ?? 0}/${rack?.rackAssigned ?? 0}`}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Total Barang</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {progressFailed ? "—" : (rack?.total_items ?? 0)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Nilai Jual</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xl font-bold tabular-nums">
-              {sellTotalFailed || !sellTotal
-                ? "—"
-                : formatCurrency(sellTotal.total_sell_effective)}
-            </p>
-            <p className="text-muted-foreground text-xs">
-              Qty{" "}
-              {sellTotalFailed || !sellTotal
-                ? "—"
-                : formatQty(sellTotal.total_qty)}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+          </>
+        }
+      />
+      <SummaryCards
+        progressFailed={progressFailed}
+        progressPercent={progressPercent}
+        rackCompleted={rack?.rackCompleted}
+        rackAssigned={rack?.rackAssigned}
+        totalItems={rack?.total_items}
+        sellTotal={sellTotal}
+        sellTotalFailed={sellTotalFailed}
+      />
       {session.status === "IN_PROGRESS" && productCount === 0 && (
         <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
           Sesi belum punya produk. Join koordinator dan scan hasil stock opname diblokir sampai produk diimpor atau ditambahkan. Sesi juga tidak bisa diselesaikan.
@@ -829,123 +464,73 @@ export default function SessionPage() {
         </CardContent>
       </Card>
       <SellSummaryCard sessionId={id} refreshKey={summaryRefresh} />
-      <Card className="my-5" id="stock-opname-results">
-        <CardHeader>
-          <CardTitle>Data Barang Stock Opname</CardTitle>
-          <CardDescription>Data terkini hasil koreksi admin</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResultSelectionBar
-            mode={selectionMode}
-            filtered={filterActive}
-            count={selectionMode === "filter" ? resultTotalItems : selectedCount}
-            onFactor={selectionMode === "filter" ? openBulkFactor : openSelectedFactor}
-            onMove={openSelectedMove}
-            moveDisabledReason={
-              selectionMode === "filter"
-                ? "Mode filter bisa mencakup banyak rak. Pindahkan hanya tersedia untuk pilihan manual dari satu rak."
-                : moveDisabledReason
-            }
-            onClear={clearSelection}
+      <ResultCard
+        table={table}
+        isRowReadOnly={isResultReadOnly}
+        filters={
+          <div className="flex flex-wrap gap-2">
+            <select
+              aria-label="Filter koordinator"
+              className="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-background [&>option]:text-foreground"
+              value={table.coordinatorFilter}
+              onChange={(event) => table.handleCoordinatorFilter(event.target.value)}
+            >
+              <option value="">Semua koordinator</option>
+              {coordinators.map((coordinator) => (
+                <option key={coordinator.id} value={coordinator.id}>
+                  {coordinator.code}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Filter rak"
+              className="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-background [&>option]:text-foreground"
+              value={table.rackFilter}
+              onChange={(event) => table.handleRackFilter(event.target.value)}
+              disabled={rackOptions.length === 0}
+            >
+              <option value="">Semua rak</option>
+              {rackOptions.map((rak) => (
+                <option key={rak.id} value={rak.id}>
+                  {table.coordinatorFilter
+                    ? rak.name
+                    : `${rak.name} - ${coordinatorCodeById.get(rak.coordinatorId) ?? ""}`}
+                </option>
+              ))}
+            </select>
+            {table.totalItems > 0 ? (
+              <Button
+                variant={selectionMode === "filter" ? "default" : "outline"}
+                size="sm"
+                onClick={activateFilterMode}
+                disabled={selectionMode === "filter" || table.totalItems > 1000}
+                title={
+                  table.totalItems > 1000
+                    ? table.filterActive
+                      ? "Persempit filter; maksimal 1000 baris."
+                      : "Maksimal 1000 baris; persempit lewat filter."
+                    : undefined
+                }
+              >
+                Pilih semua {table.totalItems} hasil{table.filterActive ? " filter" : ""}
+              </Button>
+            ) : null}
+          </div>
+        }
+        addButton={
+          <StockOpnameAddItemButton
+            sessionId={id}
+            coordinators={coordinators}
+            onSubmit={handleResultCreate}
+            disabled={session.status === "COMPLETED" || session.status === "CANCELLED"}
           />
-          {resultsFailed && results.length === 0 ? (
-            <ErrorState
-              message="Daftar hasil gagal dimuat."
-              onRetry={() => void loadData()}
-              retrying={loading}
-            />
-          ) : (
-          <StockOpnameTable
-            columns={createResultColumns(
-              handleResultUpdate,
-              handleResultDelete,
-              handleMoveRequest,
-              isResultReadOnly,
-              openItemFactor,
-            )}
-            data={results}
-            selectable
-            rowSelection={rowSelection}
-            onRowSelectionChange={handleRowSelectionChange}
-            getRowId={(item) => String(item.id)}
-            filters={
-              <div className="flex flex-wrap gap-2">
-                <select
-                  aria-label="Filter koordinator"
-                  className="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-background [&>option]:text-foreground"
-                  value={filterCoordinatorId}
-                  onChange={(event) => handleCoordinatorFilter(event.target.value)}
-                >
-                  <option value="">Semua koordinator</option>
-                  {coordinators.map((coordinator) => (
-                    <option key={coordinator.id} value={coordinator.id}>
-                      {coordinator.code}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Filter rak"
-                  className="h-9 min-w-40 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-background [&>option]:text-foreground"
-                  value={filterRackId}
-                  onChange={(event) => handleRackFilter(event.target.value)}
-                  disabled={rackOptions.length === 0}
-                >
-                  <option value="">Semua rak</option>
-                  {rackOptions.map((rack) => (
-                    <option key={rack.id} value={rack.id}>
-                      {filterCoordinatorId
-                        ? rack.name
-                        : `${rack.name} - ${coordinatorCodeById.get(rack.coordinatorId) ?? ""}`}
-                    </option>
-                  ))}
-                </select>
-                {resultTotalItems > 0 ? (
-                  <Button
-                    variant={selectionMode === "filter" ? "default" : "outline"}
-                    size="sm"
-                    onClick={activateFilterMode}
-                    disabled={selectionMode === "filter" || resultTotalItems > 1000}
-                    title={
-                      resultTotalItems > 1000
-                        ? filterActive
-                          ? "Persempit filter; maksimal 1000 baris."
-                          : "Maksimal 1000 baris; persempit lewat filter."
-                        : undefined
-                    }
-                  >
-                    Pilih semua {resultTotalItems} hasil{filterActive ? " filter" : ""}
-                  </Button>
-                ) : null}
-              </div>
-            }
-            addButton={
-              <StockOpnameAddItemButton
-                sessionId={id}
-                coordinators={coordinators}
-                onSubmit={handleResultCreate}
-                disabled={session.status === "COMPLETED" || session.status === "CANCELLED"}
-              />
-            }
-            onSearch={setResultSearchInput}
-            searchValue={resultSearchInput}
-            loading={loading}
-            page={resultPage}
-            totalPages={resultTotalPages}
-            onPageChange={handleResultPageChange}
-          />
-          )}
-        </CardContent>
-      </Card>
-      <AuditTimeline
-        key={`session-${id}`}
-        sessionId={id}
-        refreshKey={auditRefresh}
-        onOpenResult={openResultFromAudit}
+        }
       />
+      <AuditSection sessionId={id} refreshKey={auditRefresh} onOpenResult={openResultFromAudit} />
       {moveState ? (
         <StockOpnameMoveDialog
           open
-          onOpenChange={(open) => { if (!open) setMoveState(undefined); }}
+          onOpenChange={(open) => { if (!open) closeMove(); }}
           sourceRack={racks.find((rack) => rack.id === moveState.sourceRackId)}
           racks={racks}
           coordinators={coordinators}
@@ -1001,7 +586,7 @@ export default function SessionPage() {
       <QtyFactorDialog
         key={`${factorTarget?.scope ?? "closed"}-${factorTarget?.scopeId ?? ""}-${factorTarget?.itemCount ?? 0}`}
         open={Boolean(factorTarget)}
-        onOpenChange={(open) => { if (!open) setFactorTarget(undefined); }}
+        onOpenChange={(open) => { if (!open) closeFactor(); }}
         scope={factorTarget?.scope ?? "item"}
         label={factorTarget?.label ?? ""}
         itemCount={factorTarget?.itemCount ?? 0}
