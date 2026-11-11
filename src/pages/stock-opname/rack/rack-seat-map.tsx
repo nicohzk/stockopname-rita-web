@@ -14,7 +14,7 @@ import type { Rack } from "@/types/rack";
 
 export function RackSeatMap({ racks }: { racks: Rack[] }) {
   const [open, setOpen] = useState(false);
-  const uploaded = racks.filter((rack) => rack.uploadedAt).length;
+  const uploaded = racks.filter((rack) => !rack.canUpload).length;
   const sorted = [...racks].sort((a, b) =>
     a.name.localeCompare(b.name, "id", { numeric: true }),
   );
@@ -50,7 +50,7 @@ export function RackSeatMap({ racks }: { racks: Rack[] }) {
 
         <div className="grid max-h-[60vh] grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-5 md:grid-cols-6">
           {sorted.map((rack) => {
-            const isUploaded = Boolean(rack.uploadedAt);
+            const isUploaded = !rack.canUpload;
 
             return (
               <div
