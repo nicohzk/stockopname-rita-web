@@ -14,6 +14,7 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { Notice, ErrorState, RetryButton } from "@/components/ui/notice";
 import { errorMessage, refreshWarningMessage } from "@/lib/errors";
+import { formatCurrency, formatQty } from "@/lib/format-currency";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Printer } from "lucide-react";
 import { AlertDialog } from "@/components/ui/alert-dialog";
@@ -25,6 +26,7 @@ import type { Rack } from "@/types/rack";
 import {
   createStockOpname,
   deleteStockOpname,
+  getSellSummary,
   getStockOpnames,
   moveStockOpname,
   setQtyFactor,
@@ -35,6 +37,7 @@ import type {
   QtyFactor,
   QtyFactorScope,
   SelectionMode,
+  SellSummaryGroup,
 } from "@/types/stock-opname";
 import ResultSelectionBar from "./result/result-selection-bar";
 import QtyFactorDialog from "./result/qty-factor-dialog";
@@ -68,7 +71,7 @@ import {
 
 // Each part of the page loads independently: one failing request must not take
 // the others down with it.
-type PageSection = "session" | "coordinators" | "results" | "progress" | "productCount";
+type PageSection = "session" | "coordinators" | "results" | "progress" | "productCount" | "sellTotal";
 
 const SECTION_LABELS: Record<PageSection, string> = {
   session: "sesi",
@@ -76,6 +79,7 @@ const SECTION_LABELS: Record<PageSection, string> = {
   results: "daftar hasil",
   progress: "progres rak",
   productCount: "jumlah produk",
+  sellTotal: "nilai jual",
 };
 
 function describeSections(sections: PageSection[]): string {
@@ -113,6 +117,7 @@ export default function SessionPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<"COMPLETED" | "CANCELLED">("COMPLETED");
   const [productCount, setProductCount] = useState<number>();
+  const [sellTotal, setSellTotal] = useState<SellSummaryGroup>();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteCode, setDeleteCode] = useState("");
   const [deleteError, setDeleteError] = useState<string>();
@@ -152,6 +157,7 @@ export default function SessionPage() {
         }),
         getRackProgress({ sessionId: id }),
         getProductCount(id),
+        getSellSummary(id, "session"),
       ]),
     [id, filterCoordinatorId, filterRackId, resultPage, resultSearch],
   );
@@ -165,6 +171,7 @@ export default function SessionPage() {
       resultsOutcome,
       progressOutcome,
       productCountOutcome,
+      sellTotalOutcome,
     ]: Awaited<ReturnType<typeof fetchPageData>>) => {
       const failed: PageSection[] = [];
 
@@ -199,6 +206,12 @@ export default function SessionPage() {
         setProductCount(productCountOutcome.value);
       } else {
         failed.push("productCount");
+      }
+
+      if (sellTotalOutcome.status === "fulfilled") {
+        setSellTotal(sellTotalOutcome.value.groups[0]);
+      } else {
+        failed.push("sellTotal");
       }
 
       return failed;
@@ -627,6 +640,7 @@ export default function SessionPage() {
   const rack = progress[0];
   const progressFailed = failedSections.includes("progress");
   const resultsFailed = failedSections.includes("results");
+  const sellTotalFailed = failedSections.includes("sellTotal");
   const progressPercent = rack?.rackAssigned
     ? Math.round((rack.rackCompleted / rack.rackAssigned) * 100)
     : 0;
@@ -706,7 +720,7 @@ export default function SessionPage() {
         </div>
         <Separator className="mt-2" />
       </div>
-      <div className="mb-5 grid gap-3 sm:gap-5 md:grid-cols-3">
+      <div className="mb-5 grid gap-3 sm:grid-cols-2 sm:gap-5 xl:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle>Progres</CardTitle>
@@ -739,8 +753,25 @@ export default function SessionPage() {
             </p>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Nilai Jual</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xl font-bold tabular-nums">
+              {sellTotalFailed || !sellTotal
+                ? "—"
+                : formatCurrency(sellTotal.total_sell_effective)}
+            </p>
+            <p className="text-muted-foreground text-xs">
+              Qty{" "}
+              {sellTotalFailed || !sellTotal
+                ? "—"
+                : formatQty(sellTotal.total_qty)}
+            </p>
+          </CardContent>
+        </Card>
       </div>
-      <SellSummaryCard sessionId={id} refreshKey={summaryRefresh} />
       {session.status === "IN_PROGRESS" && productCount === 0 && (
         <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
           Sesi belum punya produk. Join koordinator dan scan hasil stock opname diblokir sampai produk diimpor atau ditambahkan. Sesi juga tidak bisa diselesaikan.
@@ -787,6 +818,7 @@ export default function SessionPage() {
           />
         </CardContent>
       </Card>
+      <SellSummaryCard sessionId={id} refreshKey={summaryRefresh} />
       <Card className="my-5">
         <CardHeader>
           <CardTitle>Data Barang Stock Opname</CardTitle>
