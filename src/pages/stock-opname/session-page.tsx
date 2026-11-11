@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
-import { Separator } from "@/components/ui/separator";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,7 +12,6 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { Notice, ErrorState, RetryButton } from "@/components/ui/notice";
 import { errorMessage, refreshWarningMessage } from "@/lib/errors";
-import { formatCurrency, formatQty } from "@/lib/format-currency";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Printer } from "lucide-react";
 import { AlertDialog } from "@/components/ui/alert-dialog";
@@ -41,15 +39,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import type { StockOpname } from "@/types/stock-opname";
 import SessionExportMenu from "./session-export-menu";
-import { StatusBadge } from "@/components/ui/status-badge";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+import PageHeader from "./session/page-header";
+import SummaryCards from "./session/summary-cards";
 
 // Each part of the page loads independently: one failing request must not take
 // the others down with it. The result table is not listed here: it loads and
@@ -379,27 +370,12 @@ export default function SessionPage() {
           }
         />
       ) : null}
-      <div className="mb-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink render={<Link to="/stock-opname" />} className="text-xs">
-                    Stock Opname
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage className="text-xs">{session.code}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-            <h1 className="text-2xl font-bold mt-2">{session.code}</h1>
-            <StatusBadge className="my-2" status={session.status} />
-            <p>{session.location}</p>
-          </div>
-          <div className="flex flex-wrap gap-2 sm:gap-5">
+      <PageHeader
+        title={session.code}
+        status={session.status}
+        subtitle={<p>{session.location}</p>}
+        actions={
+          <>
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="default"
@@ -426,68 +402,21 @@ export default function SessionPage() {
               )}
             </div>
             <SessionExportMenu sessionId={id} sessionCode={session.code} />
-            <Button
-              variant="secondary"
-              onClick={() => navigate("/stock-opname")}
-            >
+            <Button variant="secondary" onClick={() => navigate("/stock-opname")}>
               Kembali
             </Button>
-          </div>
-        </div>
-        <Separator className="mt-2" />
-      </div>
-      <div className="mb-5 grid gap-3 sm:grid-cols-2 sm:gap-5 xl:grid-cols-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Progres</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {progressFailed ? "—" : `${progressPercent}%`}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Status Rak</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {progressFailed
-                ? "—"
-                : `${rack?.rackCompleted ?? 0}/${rack?.rackAssigned ?? 0}`}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Total Barang</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {progressFailed ? "—" : (rack?.total_items ?? 0)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Nilai Jual</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xl font-bold tabular-nums">
-              {sellTotalFailed || !sellTotal
-                ? "—"
-                : formatCurrency(sellTotal.total_sell_effective)}
-            </p>
-            <p className="text-muted-foreground text-xs">
-              Qty{" "}
-              {sellTotalFailed || !sellTotal
-                ? "—"
-                : formatQty(sellTotal.total_qty)}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+          </>
+        }
+      />
+      <SummaryCards
+        progressFailed={progressFailed}
+        progressPercent={progressPercent}
+        rackCompleted={rack?.rackCompleted}
+        rackAssigned={rack?.rackAssigned}
+        totalItems={rack?.total_items}
+        sellTotal={sellTotal}
+        sellTotalFailed={sellTotalFailed}
+      />
       {session.status === "IN_PROGRESS" && productCount === 0 && (
         <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
           Sesi belum punya produk. Join koordinator dan scan hasil stock opname diblokir sampai produk diimpor atau ditambahkan. Sesi juga tidak bisa diselesaikan.

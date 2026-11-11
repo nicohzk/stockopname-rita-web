@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
-import { Separator } from "@/components/ui/separator";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,14 +14,6 @@ import { Notice, ErrorState, RetryButton } from "@/components/ui/notice";
 import { errorMessage, refreshWarningMessage } from "@/lib/errors";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { AlertDialog } from "@/components/ui/alert-dialog";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import { getSession } from "@/services/session.service";
 import {
   getCoordinator,
@@ -48,7 +39,8 @@ import type { Coordinator } from "@/types/coordinator";
 import { Printer } from "lucide-react";
 import CoordinatorPrintMenu from "./coordinator-print-menu";
 import { openCoordinatorUploadSummary, openUploadReport } from "@/services/report.service";
-import { StatusBadge } from "@/components/ui/status-badge";
+import PageHeader from "./session/page-header";
+import SummaryCards from "./session/summary-cards";
 import CoordinatorQRModal from "@/components/CoordinatorQRModal";
 
 // Each block of the page loads independently: one failing request must not take
@@ -425,41 +417,22 @@ export default function CoorPage() {
           }
         />
       ) : null}
-      <div className="mb-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink render={<Link to="/stock-opname" />} className="text-xs">
-                    Stock Opname
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbLink
-                    render={<Link to={`/stock-opname/sesi/${sessionId}`} />}
-                    className="text-xs"
-                  >
-                    {sessionData?.code ?? "..."}
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage className="text-xs">{coordinator.code}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-            <h1 className="text-2xl font-bold mt-2">{coordinator.code}</h1>
-            <StatusBadge className="my-2" status={coordinator.status} />
-            {(coordinator.sessionCode ?? sessionData?.code) && (
-              <p className="text-muted-foreground text-sm">
-                {coordinator.sessionCode ?? sessionData?.code}
-                {(coordinator.sessionLocation ?? sessionData?.location) ? ` · ${coordinator.sessionLocation ?? sessionData?.location}` : ""}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2 sm:gap-5">
+      <PageHeader
+        title={coordinator.code}
+        status={coordinator.status}
+        parent={{ label: sessionData?.code ?? "...", to: `/stock-opname/sesi/${sessionId}` }}
+        subtitle={
+          (coordinator.sessionCode ?? sessionData?.code) ? (
+            <p className="text-muted-foreground text-sm">
+              {coordinator.sessionCode ?? sessionData?.code}
+              {(coordinator.sessionLocation ?? sessionData?.location)
+                ? ` · ${coordinator.sessionLocation ?? sessionData?.location}`
+                : ""}
+            </p>
+          ) : undefined
+        }
+        actions={
+          <>
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="default"
@@ -484,50 +457,19 @@ export default function CoorPage() {
                 setQrOpen(true);
               }}
             />
-            <Button
-              variant="secondary"
-              onClick={() => navigate(`/stock-opname/sesi/${sessionId}`)}
-            >
+            <Button variant="secondary" onClick={() => navigate(`/stock-opname/sesi/${sessionId}`)}>
               Kembali
             </Button>
-          </div>
-        </div>
-        <Separator className="mt-2" />
-      </div>
-      <div className="mb-5 grid gap-3 sm:gap-5 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Progres</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {progressFailed ? "—" : `${progressPercent}%`}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Status Rak</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {progressFailed
-                ? "—"
-                : `${rack?.rackCompleted ?? 0}/${rack?.rackAssigned ?? 0}`}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Total Barang</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">
-              {progressFailed ? "—" : (rack?.total_items ?? 0)}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+          </>
+        }
+      />
+      <SummaryCards
+        progressFailed={progressFailed}
+        progressPercent={progressPercent}
+        rackCompleted={rack?.rackCompleted}
+        rackAssigned={rack?.rackAssigned}
+        totalItems={rack?.total_items}
+      />
       <Card className="my-5">
         <CardHeader>
           <CardTitle>Daftar Upload</CardTitle>
