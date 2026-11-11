@@ -34,7 +34,7 @@ export default function ResultSelectionBar({
         <Button size="sm" onClick={onFactor}>
           Faktor Qty
         </Button>
-        {mode === "manual" && onMove ? (
+        {onMove ? (
           <Button
             size="sm"
             variant="outline"
