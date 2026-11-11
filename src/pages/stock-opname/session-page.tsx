@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import type { RowSelectionState, Updater } from "@tanstack/react-table";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,21 +23,11 @@ import { getCoordinators } from "@/services/coordinator.service";
 import { getRackProgress, getRacks } from "@/services/rack.service";
 import type { Rack } from "@/types/rack";
 import {
-  createStockOpname,
-  deleteStockOpname,
   getSellSummary,
   getStockOpnames,
-  moveStockOpname,
-  setQtyFactor,
-  updateStockOpname,
 } from "@/services/stock-opname.service";
-import type {
-  ResultSelectionItem,
-  QtyFactor,
-  QtyFactorScope,
-  SelectionMode,
-  SellSummaryGroup,
-} from "@/types/stock-opname";
+import type { SellSummaryGroup } from "@/types/stock-opname";
+import { useResultTable, type ResultQueryPatch } from "./hooks/use-result-table";
 import ResultSelectionBar from "./result/result-selection-bar";
 import QtyFactorDialog from "./result/qty-factor-dialog";
 import SellSummaryCard from "./result/sell-summary-card";
@@ -53,11 +42,7 @@ import ProductMasterCard from "./session/product/product-master-card";
 import CoordinatorAddButton from "./session/coordinator-add-btn";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import type {
-  StockOpname,
-  StockOpnameCreateRequest,
-  StockOpnameUpdateRequest,
-} from "@/types/stock-opname";
+import type { StockOpname } from "@/types/stock-opname";
 import SessionExportMenu from "./session-export-menu";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
@@ -122,26 +107,80 @@ export default function SessionPage() {
   const [deleteCode, setDeleteCode] = useState("");
   const [deleteError, setDeleteError] = useState<string>();
   const [deleting, setDeleting] = useState(false);
-  const [moveState, setMoveState] = useState<{
-    sourceRackId: number;
-    sourceRackName: string;
-    resultIds?: number[];
-    itemCount?: number;
-  }>();
   const [auditRefresh, setAuditRefresh] = useState(0);
   const [summaryRefresh, setSummaryRefresh] = useState(0);
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [selectedItems, setSelectedItems] = useState<Map<number, ResultSelectionItem>>(new Map());
-  const [selectionMode, setSelectionMode] = useState<SelectionMode>("manual");
-  const [factorTarget, setFactorTarget] = useState<{
-    scope: QtyFactorScope;
-    scopeId?: number;
-    label: string;
-    itemCount: number;
-    currentFactor?: QtyFactor;
-    mixed?: boolean;
-    resultIds?: number[];
-  }>();
+
+  const filterActive = resultSearch.trim() !== "" || filterCoordinatorId !== "" || filterRackId !== "";
+
+  const coordinatorStatusById = new Map(
+    coordinators.map((coordinator) => [coordinator.id, coordinator.status]),
+  );
+  const isResultReadOnly = (item: StockOpname) => {
+    const status = coordinatorStatusById.get(item.coordinatorId);
+    return session?.status !== "IN_PROGRESS" || status === "COMPLETED" || status === "CANCELLED";
+  };
+
+  // Mutasi memanggil penyegaran halaman lewat ref: refreshAfterMutation baru ada
+  // setelah data pertama dimuat, sedangkan hook perlu callback-nya sejak awal.
+  const refreshRef = useRef<() => void>(() => {});
+  const table = useResultTable({
+    sessionId: id,
+    sessionStatus: session?.status,
+    coordinators,
+    racks,
+    results,
+    totalItems: resultTotalItems,
+    filterActive,
+    filter: {
+      search: resultSearch,
+      coordinatorId: filterCoordinatorId ? Number(filterCoordinatorId) : undefined,
+      rakId: filterRackId ? Number(filterRackId) : undefined,
+    },
+    bulkScope: { scope: "session", label: session?.code ?? "Sesi" },
+    moveBlockedMessages: {
+      session: "Sesi sudah final.",
+      coordinator: "Koordinator sudah final.",
+    },
+    onQueryChange: (patch: ResultQueryPatch) => {
+      if (patch.search !== undefined) {
+        setResultSearch(patch.search);
+        setResultSearchInput(patch.search);
+      }
+      if (patch.coordinatorFilter !== undefined) setFilterCoordinatorId(patch.coordinatorFilter);
+      if (patch.rackFilter !== undefined) setFilterRackId(patch.rackFilter);
+      setResultPage(patch.page ?? 1);
+    },
+    onChanged: () => {
+      setAuditRefresh((value) => value + 1);
+      setSummaryRefresh((value) => value + 1);
+      refreshRef.current();
+    },
+    showToast,
+  });
+  const {
+    rowSelection,
+    selectedCount,
+    selectionMode,
+    moveDisabledReason,
+    handleRowSelectionChange,
+    clearSelection,
+    activateFilterMode,
+    openResultFromAudit,
+    openItemFactor,
+    openSelectedFactor,
+    openBulkFactor,
+    handleMoveRequest,
+    openSelectedMove,
+    moveState,
+    closeMove,
+    handleMoveSubmit,
+    factorTarget,
+    closeFactor,
+    handleFactorSubmit,
+    handleResultUpdate,
+    handleResultDelete,
+    handleResultCreate,
+  } = table;
 
   const fetchPageData = useCallback(
     () =>
@@ -262,42 +301,10 @@ export default function SessionPage() {
     }
   };
 
-  const clearSelection = () => {
-    setRowSelection({});
-    setSelectedItems(new Map());
-    setSelectionMode("manual");
-  };
-
-  const handleRowSelectionChange = (updater: Updater<RowSelectionState>) => {
-    const next = typeof updater === "function" ? updater(rowSelection) : updater;
-    if (Object.keys(next).length > 500) {
-      showToast("Maksimal 500 item untuk selection manual.", "error");
-      return;
-    }
-    setRowSelection(next);
-    setSelectedItems((previous) => {
-      const updated = new Map(previous);
-      for (const id of updated.keys()) {
-        if (!next[String(id)]) updated.delete(id);
-      }
-      for (const item of results) {
-        if (next[String(item.id)]) {
-          updated.set(item.id, {
-            id: item.id,
-            rackId: item.rackId,
-            coordinatorId: item.coordinatorId,
-            qtyFactor: item.qtyFactor,
-          });
-        } else {
-          updated.delete(item.id);
-        }
-      }
-      return updated;
-    });
-    if (Object.keys(next).length > 0) {
-      setSelectionMode("manual");
-    }
-  };
+  // Hook mutasi memanggil callback ini; ref menunjuk versi terbaru tiap render.
+  useEffect(() => {
+    refreshRef.current = () => void refreshAfterMutation();
+  });
 
   const refreshProductCount = async () => {
     try {
@@ -364,12 +371,10 @@ export default function SessionPage() {
       setError(undefined);
       setResultSearch(resultSearchInput);
       setResultPage(1);
-      setRowSelection({});
-      setSelectedItems(new Map());
-      setSelectionMode("manual");
+      clearSelection();
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [resultSearchInput, resultSearch]);
+  }, [resultSearchInput, resultSearch, clearSelection]);
 
   const changeStatus = async (status: "COMPLETED" | "CANCELLED") => {
     try {
@@ -382,82 +387,6 @@ export default function SessionPage() {
     // even when the follow-up refresh fails.
     setSession((current) => (current ? { ...current, status } : current));
     showToast(`Sesi berhasil ${status === "COMPLETED" ? "diselesaikan" : "dibatalkan"}.`);
-    void refreshAfterMutation();
-  };
-  const handleResultUpdate = async (
-    resultId: number,
-    data: StockOpnameUpdateRequest,
-  ) => {
-    try {
-      await updateStockOpname(resultId, data);
-    } catch (mutationError) {
-      showToast(
-        errorMessage(mutationError, "Gagal memperbarui data stock opname."),
-        "error",
-      );
-      throw mutationError;
-    }
-    showToast("Data stock opname berhasil diperbarui.");
-    clearSelection();
-    setAuditRefresh((value) => value + 1);
-    setSummaryRefresh((value) => value + 1);
-    void refreshAfterMutation();
-  };
-  const handleResultDelete = async (resultId: number) => {
-    try {
-      await deleteStockOpname(resultId);
-    } catch (mutationError) {
-      showToast(
-        errorMessage(mutationError, "Gagal menghapus data stock opname."),
-        "error",
-      );
-      throw mutationError;
-    }
-    showToast("Data stock opname berhasil dihapus.");
-    clearSelection();
-    setAuditRefresh((value) => value + 1);
-    setSummaryRefresh((value) => value + 1);
-    void refreshAfterMutation();
-  };
-  const handleResultCreate = async (data: StockOpnameCreateRequest) => {
-    try {
-      await createStockOpname(data);
-    } catch (mutationError) {
-      showToast(errorMessage(mutationError, "Gagal menambahkan item."), "error");
-      throw mutationError;
-    }
-    showToast("Item berhasil ditambahkan.");
-    clearSelection();
-    setAuditRefresh((value) => value + 1);
-    setSummaryRefresh((value) => value + 1);
-    void refreshAfterMutation();
-  };
-
-  const handleMoveRequest = (item: { rackId: number; rackName: string; id: number }) => {
-    setMoveState({
-      sourceRackId: item.rackId,
-      sourceRackName: item.rackName,
-      resultIds: [item.id],
-      itemCount: 1,
-    });
-  };
-
-  const handleMoveSubmit = async (targetRakId: number, note: string) => {
-    if (!moveState) return;
-    const result = await moveStockOpname({
-      sourceRakId: moveState.sourceRackId,
-      targetRakId,
-      resultIds: moveState.resultIds,
-      note,
-    });
-    clearSelection();
-    setAuditRefresh((value) => value + 1);
-    setSummaryRefresh((value) => value + 1);
-    showToast(
-      `${result.data.moved_count} item dipindah${result.data.merged_count ? `, ${result.data.merged_count} digabung` : ""}.${
-        result.data.reopened_rack_id ? " Upload asal dilepas dari rak sumber; rak bisa diupload ulang." : ""
-      }`,
-    );
     void refreshAfterMutation();
   };
 
@@ -482,136 +411,6 @@ export default function SessionPage() {
     setResultPage(nextPage);
   };
   const coordinatorCodeById = new Map(coordinators.map((coordinator) => [coordinator.id, coordinator.code]));
-  const coordinatorStatusById = new Map(coordinators.map((coordinator) => [coordinator.id, coordinator.status]));
-  const isResultReadOnly = (item: StockOpname) => {
-    const status = coordinatorStatusById.get(item.coordinatorId);
-    return session?.status !== "IN_PROGRESS" || status === "COMPLETED" || status === "CANCELLED";
-  };
-
-  const selectedItemsList = Array.from(selectedItems.values());
-  const selectedCount = selectedItemsList.length;
-  const selectedRackId = selectedItemsList.length > 0
-    ? selectedItemsList.every((item) => item.rackId === selectedItemsList[0].rackId)
-      ? selectedItemsList[0].rackId
-      : undefined
-    : undefined;
-  const selectedRack = selectedRackId !== undefined
-    ? racks.find((rack) => rack.id === selectedRackId)
-    : undefined;
-  const mixedSelectedFactor = new Set(selectedItemsList.map((item) => item.qtyFactor)).size > 1;
-  const sourceCoordinatorStatus = selectedRack
-    ? coordinatorStatusById.get(selectedRack.coordinatorId)
-    : undefined;
-  const moveDisabledReason = selectedCount === 0
-    ? "Pilih item terlebih dahulu."
-    : selectedRackId === undefined
-      ? "Pilih item dari satu rak untuk memindahkan."
-      : !selectedRack
-        ? "Rak sumber tidak ditemukan."
-        : session?.status !== "IN_PROGRESS"
-          ? "Sesi sudah final."
-          : sourceCoordinatorStatus === "COMPLETED" || sourceCoordinatorStatus === "CANCELLED"
-            ? "Koordinator sudah final."
-            : undefined;
-
-  const filterActive = resultSearch.trim() !== "" || filterCoordinatorId !== "" || filterRackId !== "";
-
-  // Jumps from an audit entry to the matching row in the results table.
-  const openResultFromAudit = (term: string) => {
-    setResultSearchInput(term);
-    setResultSearch(term);
-    setResultPage(1);
-    requestAnimationFrame(() => {
-      document.getElementById("stock-opname-results")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  };
-
-  const openItemFactor = (item: StockOpname) => {
-    setFactorTarget({
-      scope: "item",
-      scopeId: item.id,
-      label: item.name,
-      itemCount: 1,
-      currentFactor: item.qtyFactor,
-    });
-  };
-
-  const openSelectedFactor = () => {
-    setFactorTarget({
-      scope: "items",
-      resultIds: selectedItemsList.map((item) => item.id),
-      label: `${selectedCount} item terpilih`,
-      itemCount: selectedCount,
-      mixed: mixedSelectedFactor,
-    });
-  };
-
-  const activateFilterMode = () => {
-    setRowSelection({});
-    setSelectedItems(new Map());
-    setSelectionMode("filter");
-  };
-
-  const openBulkFactor = () => {
-    setFactorTarget(
-      filterActive
-        ? {
-            scope: "filter",
-            label: "Semua hasil filter",
-            itemCount: resultTotalItems,
-            mixed: true,
-          }
-        : {
-            scope: "session",
-            label: session?.code ?? "Sesi",
-            itemCount: resultTotalItems,
-          },
-    );
-  };
-
-  const openSelectedMove = () => {
-    if (selectedCount === 0 || !selectedRack || moveDisabledReason) return;
-    setMoveState({
-      sourceRackId: selectedRack.id,
-      sourceRackName: selectedRack.name,
-      resultIds: selectedItemsList.map((item) => item.id),
-      itemCount: selectedCount,
-    });
-  };
-
-  const handleFactorSubmit = async (factor: QtyFactor, note: string) => {
-    if (!factorTarget) return;
-    try {
-      const result = await setQtyFactor(id, {
-        scope: factorTarget.scope,
-        scopeId: factorTarget.scopeId,
-        resultIds: factorTarget.resultIds,
-        filter: factorTarget.scope === "filter"
-          ? {
-              search: resultSearch.trim() || undefined,
-              coordinatorId: filterCoordinatorId ? Number(filterCoordinatorId) : undefined,
-              rakId: filterRackId ? Number(filterRackId) : undefined,
-            }
-          : undefined,
-        qtyFactor: factor,
-        note,
-      });
-      showToast(
-        result.updated_count === 0
-          ? "Tidak ada perubahan faktor."
-          : `${result.updated_count} item berhasil diubah faktornya.`,
-      );
-    } catch (mutationError) {
-      showToast(errorMessage(mutationError, "Gagal mengubah faktor qty."), "error");
-      throw mutationError;
-    }
-    clearSelection();
-    setFactorTarget(undefined);
-    setAuditRefresh((value) => value + 1);
-    setSummaryRefresh((value) => value + 1);
-    void refreshAfterMutation();
-  };
-
   const rackOptions = racks.filter(
     (rack) => !filterCoordinatorId || rack.coordinatorId === Number(filterCoordinatorId),
   );
@@ -945,7 +744,7 @@ export default function SessionPage() {
       {moveState ? (
         <StockOpnameMoveDialog
           open
-          onOpenChange={(open) => { if (!open) setMoveState(undefined); }}
+          onOpenChange={(open) => { if (!open) closeMove(); }}
           sourceRack={racks.find((rack) => rack.id === moveState.sourceRackId)}
           racks={racks}
           coordinators={coordinators}
@@ -1001,7 +800,7 @@ export default function SessionPage() {
       <QtyFactorDialog
         key={`${factorTarget?.scope ?? "closed"}-${factorTarget?.scopeId ?? ""}-${factorTarget?.itemCount ?? 0}`}
         open={Boolean(factorTarget)}
-        onOpenChange={(open) => { if (!open) setFactorTarget(undefined); }}
+        onOpenChange={(open) => { if (!open) closeFactor(); }}
         scope={factorTarget?.scope ?? "item"}
         label={factorTarget?.label ?? ""}
         itemCount={factorTarget?.itemCount ?? 0}
