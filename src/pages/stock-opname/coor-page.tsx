@@ -37,17 +37,17 @@ import {
   deleteStockOpname,
   getStockOpnames,
   moveStockOpname,
-  setSellFactor,
+  setQtyFactor,
   updateStockOpname,
 } from "@/services/stock-opname.service";
 import type {
   ResultSelectionItem,
-  SellFactor,
-  SellFactorScope,
+  QtyFactor,
+  QtyFactorScope,
   SelectionMode,
 } from "@/types/stock-opname";
 import ResultSelectionBar from "./result/result-selection-bar";
-import SellFactorDialog from "./result/sell-factor-dialog";
+import QtyFactorDialog from "./result/qty-factor-dialog";
 import StockOpnameAddItemButton from "./result/so-add-item-btn";
 import StockOpnameMoveDialog from "./result/so-move-dialog";
 import AuditTimeline from "./audit/audit-timeline";
@@ -89,7 +89,7 @@ const SECTION_LABELS: Record<PageSection, string> = {
   progress: "progres rak",
   racks: "daftar rak",
   coordinators: "daftar koordinator",
-  uploads: "riwayat upload",
+  uploads: "upload",
 };
 
 function describeSections(sections: PageSection[]): string {
@@ -140,11 +140,11 @@ export default function CoorPage() {
   const [selectedItems, setSelectedItems] = useState<Map<number, ResultSelectionItem>>(new Map());
   const [selectionMode, setSelectionMode] = useState<SelectionMode>("manual");
   const [factorTarget, setFactorTarget] = useState<{
-    scope: SellFactorScope;
+    scope: QtyFactorScope;
     scopeId?: number;
     label: string;
     itemCount: number;
-    currentFactor?: SellFactor;
+    currentFactor?: QtyFactor;
     mixed?: boolean;
     resultIds?: number[];
   }>();
@@ -328,7 +328,7 @@ export default function CoorPage() {
             id: item.id,
             rackId: item.rackId,
             coordinatorId: item.coordinatorId,
-            sellFactor: item.sellFactor,
+            qtyFactor: item.qtyFactor,
           });
         } else {
           updated.delete(item.id);
@@ -467,7 +467,9 @@ export default function CoorPage() {
     clearSelection();
     setAuditRefresh((value) => value + 1);
     showToast(
-      `${result.data.moved_count} item dipindah${result.data.merged_count ? `, ${result.data.merged_count} digabung` : ""}.`,
+      `${result.data.moved_count} item dipindah${result.data.merged_count ? `, ${result.data.merged_count} digabung` : ""}.${
+        result.data.reopened_rack_id ? " Rak sumber kosong; upload dibuka dan bisa diupload ulang." : ""
+      }`,
     );
     void refreshAfterMutation();
   };
@@ -484,9 +486,9 @@ export default function CoorPage() {
     setError(undefined);
     setResultPage(nextPage);
   };
-  const handleOpenUploadReport = async (uploadId: number) => {
+  const handleOpenUploadReport = async (uploadId: number, includeCarton = false) => {
     try {
-      await openUploadReport(uploadId);
+      await openUploadReport(uploadId, includeCarton);
     } catch (mutationError) {
       showToast(
         mutationError instanceof Error ? mutationError.message : "Gagal membuat PDF upload.",
@@ -565,7 +567,7 @@ export default function CoorPage() {
   const selectedRack = selectedRackId !== undefined
     ? racks.find((item) => item.id === selectedRackId)
     : undefined;
-  const mixedSelectedFactor = new Set(selectedItemsList.map((item) => item.sellFactor)).size > 1;
+  const mixedSelectedFactor = new Set(selectedItemsList.map((item) => item.qtyFactor)).size > 1;
   const moveDisabledReason = selectedCount === 0
     ? "Pilih item terlebih dahulu."
     : selectedRackId === undefined
@@ -577,13 +579,23 @@ export default function CoorPage() {
           : undefined;
   const filterActive = resultSearch.trim() !== "" || filterRackId !== "";
 
-  const openItemFactor = (item: { id: number; name: string; sellFactor: SellFactor }) => {
+  // Jumps from an audit entry to the matching row in the results table.
+  const openResultFromAudit = (term: string) => {
+    setResultSearchInput(term);
+    setResultSearch(term);
+    setResultPage(1);
+    requestAnimationFrame(() => {
+      document.getElementById("stock-opname-results")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
+  const openItemFactor = (item: { id: number; name: string; qtyFactor: QtyFactor }) => {
     setFactorTarget({
       scope: "item",
       scopeId: item.id,
       label: item.name,
       itemCount: 1,
-      currentFactor: item.sellFactor,
+      currentFactor: item.qtyFactor,
     });
   };
 
@@ -593,15 +605,6 @@ export default function CoorPage() {
       scopeId: item.id,
       label: item.name,
       itemCount: item.itemCount,
-    });
-  };
-
-  const openCoordinatorFactor = () => {
-    setFactorTarget({
-      scope: "coordinator",
-      scopeId: id,
-      label: coordinator.code,
-      itemCount: rack?.total_items ?? 0,
     });
   };
 
@@ -621,13 +624,22 @@ export default function CoorPage() {
     setSelectionMode("filter");
   };
 
-  const openFilterFactor = () => {
-    setFactorTarget({
-      scope: "filter",
-      label: "Semua hasil filter",
-      itemCount: resultTotalItems,
-      mixed: true,
-    });
+  const openBulkFactor = () => {
+    setFactorTarget(
+      filterActive
+        ? {
+            scope: "filter",
+            label: "Semua hasil filter",
+            itemCount: resultTotalItems,
+            mixed: true,
+          }
+        : {
+            scope: "coordinator",
+            scopeId: id,
+            label: coordinator.code,
+            itemCount: resultTotalItems,
+          },
+    );
   };
 
   const openSelectedMove = () => {
@@ -640,10 +652,10 @@ export default function CoorPage() {
     });
   };
 
-  const handleFactorSubmit = async (factor: SellFactor, note: string) => {
+  const handleFactorSubmit = async (factor: QtyFactor, note: string) => {
     if (!factorTarget) return;
     try {
-      const result = await setSellFactor(session, {
+      const result = await setQtyFactor(session, {
         scope: factorTarget.scope,
         scopeId: factorTarget.scopeId,
         resultIds: factorTarget.resultIds,
@@ -654,7 +666,7 @@ export default function CoorPage() {
               rakId: filterRackId ? Number(filterRackId) : undefined,
             }
           : undefined,
-        factor,
+        qtyFactor: factor,
         note,
       });
       showToast(
@@ -663,7 +675,7 @@ export default function CoorPage() {
           : `${result.updated_count} item berhasil diubah faktornya.`,
       );
     } catch (mutationError) {
-      showToast(errorMessage(mutationError, "Gagal mengubah faktor jual."), "error");
+      showToast(errorMessage(mutationError, "Gagal mengubah faktor qty."), "error");
       throw mutationError;
     }
     clearSelection();
@@ -726,20 +738,6 @@ export default function CoorPage() {
           </div>
           <div className="flex flex-wrap gap-2 sm:gap-5">
             <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                onClick={openCoordinatorFactor}
-                disabled={(rack?.total_items ?? 0) === 0 || (rack?.total_items ?? 0) > 1000}
-                title={
-                  (rack?.total_items ?? 0) === 0
-                    ? "Belum ada hasil stock opname."
-                    : (rack?.total_items ?? 0) > 1000
-                      ? "Lebih dari 1000 hasil; pecah per rak."
-                      : undefined
-                }
-              >
-                Faktor Jual
-              </Button>
               <Button
                 variant="default"
                 onClick={() => { setPendingAction("COMPLETED"); setConfirmOpen(true); }}
@@ -809,8 +807,8 @@ export default function CoorPage() {
       </div>
       <Card className="my-5">
         <CardHeader>
-          <CardTitle>Riwayat Upload (Histori)</CardTitle>
-          <CardDescription>Histori submit asli; koreksi admin tidak mengubah data ini</CardDescription>
+          <CardTitle>Daftar Upload</CardTitle>
+          <CardDescription>Laporan upload memakai hasil terkini; koreksi admin ikut tercermin.</CardDescription>
           <CardAction>
             <Button
               variant="outline"
@@ -833,7 +831,7 @@ export default function CoorPage() {
       <Card className="my-5">
         <CardHeader>
           <CardTitle>Daftar Rak</CardTitle>
-          <CardDescription>Rak yang belum diupload masih bisa dihapus</CardDescription>
+          <CardDescription>Hapus hanya untuk rak kosong yang belum diupload.</CardDescription>
           <CardAction>
             <RackSeatMap racks={racks} />
           </CardAction>
@@ -850,7 +848,7 @@ export default function CoorPage() {
           />
         </CardContent>
       </Card>
-      <Card className="my-5">
+      <Card className="my-5" id="stock-opname-results">
         <CardHeader>
           <CardTitle>Data Barang Stock Opname</CardTitle>
           <CardDescription>Data terkini hasil koreksi admin</CardDescription>
@@ -858,8 +856,9 @@ export default function CoorPage() {
         <CardContent>
           <ResultSelectionBar
             mode={selectionMode}
+            filtered={filterActive}
             count={selectionMode === "filter" ? resultTotalItems : selectedCount}
-            onFactor={selectionMode === "filter" ? openFilterFactor : openSelectedFactor}
+            onFactor={selectionMode === "filter" ? openBulkFactor : openSelectedFactor}
             onMove={selectionMode === "filter" ? undefined : openSelectedMove}
             moveDisabledReason={selectionMode === "filter" ? undefined : moveDisabledReason}
             onClear={clearSelection}
@@ -900,19 +899,21 @@ export default function CoorPage() {
                     </option>
                   ))}
                 </select>
-                {filterActive ? (
+                {resultTotalItems > 0 ? (
                   <Button
                     variant={selectionMode === "filter" ? "default" : "outline"}
                     size="sm"
                     onClick={activateFilterMode}
-                    disabled={selectionMode === "filter" || resultTotalItems === 0 || resultTotalItems > 1000}
+                    disabled={selectionMode === "filter" || resultTotalItems > 1000}
                     title={
                       resultTotalItems > 1000
-                        ? "Persempit filter; maksimal 1000 baris."
+                        ? filterActive
+                          ? "Persempit filter; maksimal 1000 baris."
+                          : "Maksimal 1000 baris; faktorkan per rak."
                         : undefined
                     }
                   >
-                    Pilih semua {resultTotalItems} hasil filter
+                    Pilih semua {resultTotalItems} hasil{filterActive ? " filter" : ""}
                   </Button>
                 ) : null}
               </div>
@@ -935,7 +936,12 @@ export default function CoorPage() {
           )}
         </CardContent>
       </Card>
-      <AuditTimeline key={`coordinator-${id}`} coordinatorId={id} refreshKey={auditRefresh} />
+      <AuditTimeline
+        key={`coordinator-${id}`}
+        coordinatorId={id}
+        refreshKey={auditRefresh}
+        onOpenResult={openResultFromAudit}
+      />
       {moveState ? (
         <StockOpnameMoveDialog
           open
@@ -980,7 +986,7 @@ export default function CoorPage() {
         open={qrOpen}
         onClose={() => setQrOpen(false)}
       />
-      <SellFactorDialog
+      <QtyFactorDialog
         key={`${factorTarget?.scope ?? "closed"}-${factorTarget?.scopeId ?? ""}-${factorTarget?.itemCount ?? 0}`}
         open={Boolean(factorTarget)}
         onOpenChange={(open) => { if (!open) setFactorTarget(undefined); }}

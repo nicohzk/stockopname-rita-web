@@ -14,6 +14,7 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { Notice, ErrorState, RetryButton } from "@/components/ui/notice";
 import { errorMessage, refreshWarningMessage } from "@/lib/errors";
+import { formatCurrency, formatQty } from "@/lib/format-currency";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { Printer } from "lucide-react";
 import { AlertDialog } from "@/components/ui/alert-dialog";
@@ -25,19 +26,21 @@ import type { Rack } from "@/types/rack";
 import {
   createStockOpname,
   deleteStockOpname,
+  getSellSummary,
   getStockOpnames,
   moveStockOpname,
-  setSellFactor,
+  setQtyFactor,
   updateStockOpname,
 } from "@/services/stock-opname.service";
 import type {
   ResultSelectionItem,
-  SellFactor,
-  SellFactorScope,
+  QtyFactor,
+  QtyFactorScope,
   SelectionMode,
+  SellSummaryGroup,
 } from "@/types/stock-opname";
 import ResultSelectionBar from "./result/result-selection-bar";
-import SellFactorDialog from "./result/sell-factor-dialog";
+import QtyFactorDialog from "./result/qty-factor-dialog";
 import SellSummaryCard from "./result/sell-summary-card";
 import StockOpnameAddItemButton from "./result/so-add-item-btn";
 import StockOpnameMoveDialog from "./result/so-move-dialog";
@@ -68,7 +71,7 @@ import {
 
 // Each part of the page loads independently: one failing request must not take
 // the others down with it.
-type PageSection = "session" | "coordinators" | "results" | "progress" | "productCount";
+type PageSection = "session" | "coordinators" | "results" | "progress" | "productCount" | "sellTotal";
 
 const SECTION_LABELS: Record<PageSection, string> = {
   session: "sesi",
@@ -76,6 +79,7 @@ const SECTION_LABELS: Record<PageSection, string> = {
   results: "daftar hasil",
   progress: "progres rak",
   productCount: "jumlah produk",
+  sellTotal: "nilai jual",
 };
 
 function describeSections(sections: PageSection[]): string {
@@ -113,6 +117,7 @@ export default function SessionPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<"COMPLETED" | "CANCELLED">("COMPLETED");
   const [productCount, setProductCount] = useState<number>();
+  const [sellTotal, setSellTotal] = useState<SellSummaryGroup>();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteCode, setDeleteCode] = useState("");
   const [deleteError, setDeleteError] = useState<string>();
@@ -129,11 +134,11 @@ export default function SessionPage() {
   const [selectedItems, setSelectedItems] = useState<Map<number, ResultSelectionItem>>(new Map());
   const [selectionMode, setSelectionMode] = useState<SelectionMode>("manual");
   const [factorTarget, setFactorTarget] = useState<{
-    scope: SellFactorScope;
+    scope: QtyFactorScope;
     scopeId?: number;
     label: string;
     itemCount: number;
-    currentFactor?: SellFactor;
+    currentFactor?: QtyFactor;
     mixed?: boolean;
     resultIds?: number[];
   }>();
@@ -152,6 +157,7 @@ export default function SessionPage() {
         }),
         getRackProgress({ sessionId: id }),
         getProductCount(id),
+        getSellSummary(id, "session"),
       ]),
     [id, filterCoordinatorId, filterRackId, resultPage, resultSearch],
   );
@@ -165,6 +171,7 @@ export default function SessionPage() {
       resultsOutcome,
       progressOutcome,
       productCountOutcome,
+      sellTotalOutcome,
     ]: Awaited<ReturnType<typeof fetchPageData>>) => {
       const failed: PageSection[] = [];
 
@@ -199,6 +206,12 @@ export default function SessionPage() {
         setProductCount(productCountOutcome.value);
       } else {
         failed.push("productCount");
+      }
+
+      if (sellTotalOutcome.status === "fulfilled") {
+        setSellTotal(sellTotalOutcome.value.groups[0]);
+      } else {
+        failed.push("sellTotal");
       }
 
       return failed;
@@ -273,7 +286,7 @@ export default function SessionPage() {
             id: item.id,
             rackId: item.rackId,
             coordinatorId: item.coordinatorId,
-            sellFactor: item.sellFactor,
+            qtyFactor: item.qtyFactor,
           });
         } else {
           updated.delete(item.id);
@@ -441,7 +454,9 @@ export default function SessionPage() {
     setAuditRefresh((value) => value + 1);
     setSummaryRefresh((value) => value + 1);
     showToast(
-      `${result.data.moved_count} item dipindah${result.data.merged_count ? `, ${result.data.merged_count} digabung` : ""}.`,
+      `${result.data.moved_count} item dipindah${result.data.merged_count ? `, ${result.data.merged_count} digabung` : ""}.${
+        result.data.reopened_rack_id ? " Rak sumber kosong; upload dibuka dan bisa diupload ulang." : ""
+      }`,
     );
     void refreshAfterMutation();
   };
@@ -483,7 +498,7 @@ export default function SessionPage() {
   const selectedRack = selectedRackId !== undefined
     ? racks.find((rack) => rack.id === selectedRackId)
     : undefined;
-  const mixedSelectedFactor = new Set(selectedItemsList.map((item) => item.sellFactor)).size > 1;
+  const mixedSelectedFactor = new Set(selectedItemsList.map((item) => item.qtyFactor)).size > 1;
   const sourceCoordinatorStatus = selectedRack
     ? coordinatorStatusById.get(selectedRack.coordinatorId)
     : undefined;
@@ -501,21 +516,23 @@ export default function SessionPage() {
 
   const filterActive = resultSearch.trim() !== "" || filterCoordinatorId !== "" || filterRackId !== "";
 
+  // Jumps from an audit entry to the matching row in the results table.
+  const openResultFromAudit = (term: string) => {
+    setResultSearchInput(term);
+    setResultSearch(term);
+    setResultPage(1);
+    requestAnimationFrame(() => {
+      document.getElementById("stock-opname-results")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
   const openItemFactor = (item: StockOpname) => {
     setFactorTarget({
       scope: "item",
       scopeId: item.id,
       label: item.name,
       itemCount: 1,
-      currentFactor: item.sellFactor,
-    });
-  };
-
-  const openSessionFactor = () => {
-    setFactorTarget({
-      scope: "session",
-      label: session?.code ?? "Sesi",
-      itemCount: progress[0]?.total_items ?? 0,
+      currentFactor: item.qtyFactor,
     });
   };
 
@@ -535,13 +552,21 @@ export default function SessionPage() {
     setSelectionMode("filter");
   };
 
-  const openFilterFactor = () => {
-    setFactorTarget({
-      scope: "filter",
-      label: "Semua hasil filter",
-      itemCount: resultTotalItems,
-      mixed: true,
-    });
+  const openBulkFactor = () => {
+    setFactorTarget(
+      filterActive
+        ? {
+            scope: "filter",
+            label: "Semua hasil filter",
+            itemCount: resultTotalItems,
+            mixed: true,
+          }
+        : {
+            scope: "session",
+            label: session?.code ?? "Sesi",
+            itemCount: resultTotalItems,
+          },
+    );
   };
 
   const openSelectedMove = () => {
@@ -554,10 +579,10 @@ export default function SessionPage() {
     });
   };
 
-  const handleFactorSubmit = async (factor: SellFactor, note: string) => {
+  const handleFactorSubmit = async (factor: QtyFactor, note: string) => {
     if (!factorTarget) return;
     try {
-      const result = await setSellFactor(id, {
+      const result = await setQtyFactor(id, {
         scope: factorTarget.scope,
         scopeId: factorTarget.scopeId,
         resultIds: factorTarget.resultIds,
@@ -568,7 +593,7 @@ export default function SessionPage() {
               rakId: filterRackId ? Number(filterRackId) : undefined,
             }
           : undefined,
-        factor,
+        qtyFactor: factor,
         note,
       });
       showToast(
@@ -577,7 +602,7 @@ export default function SessionPage() {
           : `${result.updated_count} item berhasil diubah faktornya.`,
       );
     } catch (mutationError) {
-      showToast(errorMessage(mutationError, "Gagal mengubah faktor jual."), "error");
+      showToast(errorMessage(mutationError, "Gagal mengubah faktor qty."), "error");
       throw mutationError;
     }
     clearSelection();
@@ -625,6 +650,7 @@ export default function SessionPage() {
   const rack = progress[0];
   const progressFailed = failedSections.includes("progress");
   const resultsFailed = failedSections.includes("results");
+  const sellTotalFailed = failedSections.includes("sellTotal");
   const progressPercent = rack?.rackAssigned
     ? Math.round((rack.rackCompleted / rack.rackAssigned) * 100)
     : 0;
@@ -670,20 +696,6 @@ export default function SessionPage() {
           <div className="flex flex-wrap gap-2 sm:gap-5">
             <div className="flex flex-wrap gap-2">
               <Button
-                variant="outline"
-                onClick={openSessionFactor}
-                disabled={(rack?.total_items ?? 0) === 0 || (rack?.total_items ?? 0) > 1000}
-                title={
-                  (rack?.total_items ?? 0) === 0
-                    ? "Belum ada hasil stock opname."
-                    : (rack?.total_items ?? 0) > 1000
-                      ? "Lebih dari 1000 hasil; pecah per koordinator/rak."
-                      : undefined
-                }
-              >
-                Faktor Jual
-              </Button>
-              <Button
                 variant="default"
                 onClick={() => { setPendingAction("COMPLETED"); setConfirmOpen(true); }}
                 disabled={session.status !== "IN_PROGRESS" || productCount === 0}
@@ -718,7 +730,7 @@ export default function SessionPage() {
         </div>
         <Separator className="mt-2" />
       </div>
-      <div className="mb-5 grid gap-3 sm:gap-5 md:grid-cols-3">
+      <div className="mb-5 grid gap-3 sm:grid-cols-2 sm:gap-5 xl:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle>Progres</CardTitle>
@@ -751,8 +763,25 @@ export default function SessionPage() {
             </p>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Nilai Jual</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xl font-bold tabular-nums">
+              {sellTotalFailed || !sellTotal
+                ? "—"
+                : formatCurrency(sellTotal.total_sell_effective)}
+            </p>
+            <p className="text-muted-foreground text-xs">
+              Qty{" "}
+              {sellTotalFailed || !sellTotal
+                ? "—"
+                : formatQty(sellTotal.total_qty)}
+            </p>
+          </CardContent>
+        </Card>
       </div>
-      <SellSummaryCard sessionId={id} refreshKey={summaryRefresh} />
       {session.status === "IN_PROGRESS" && productCount === 0 && (
         <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
           Sesi belum punya produk. Join koordinator dan scan hasil stock opname diblokir sampai produk diimpor atau ditambahkan. Sesi juga tidak bisa diselesaikan.
@@ -799,7 +828,8 @@ export default function SessionPage() {
           />
         </CardContent>
       </Card>
-      <Card className="my-5">
+      <SellSummaryCard sessionId={id} refreshKey={summaryRefresh} />
+      <Card className="my-5" id="stock-opname-results">
         <CardHeader>
           <CardTitle>Data Barang Stock Opname</CardTitle>
           <CardDescription>Data terkini hasil koreksi admin</CardDescription>
@@ -807,8 +837,9 @@ export default function SessionPage() {
         <CardContent>
           <ResultSelectionBar
             mode={selectionMode}
+            filtered={filterActive}
             count={selectionMode === "filter" ? resultTotalItems : selectedCount}
-            onFactor={selectionMode === "filter" ? openFilterFactor : openSelectedFactor}
+            onFactor={selectionMode === "filter" ? openBulkFactor : openSelectedFactor}
             onMove={selectionMode === "filter" ? undefined : openSelectedMove}
             moveDisabledReason={selectionMode === "filter" ? undefined : moveDisabledReason}
             onClear={clearSelection}
@@ -864,19 +895,21 @@ export default function SessionPage() {
                     </option>
                   ))}
                 </select>
-                {filterActive ? (
+                {resultTotalItems > 0 ? (
                   <Button
                     variant={selectionMode === "filter" ? "default" : "outline"}
                     size="sm"
                     onClick={activateFilterMode}
-                    disabled={selectionMode === "filter" || resultTotalItems === 0 || resultTotalItems > 1000}
+                    disabled={selectionMode === "filter" || resultTotalItems > 1000}
                     title={
                       resultTotalItems > 1000
-                        ? "Persempit filter; maksimal 1000 baris."
+                        ? filterActive
+                          ? "Persempit filter; maksimal 1000 baris."
+                          : "Maksimal 1000 baris; persempit lewat filter."
                         : undefined
                     }
                   >
-                    Pilih semua {resultTotalItems} hasil filter
+                    Pilih semua {resultTotalItems} hasil{filterActive ? " filter" : ""}
                   </Button>
                 ) : null}
               </div>
@@ -899,7 +932,12 @@ export default function SessionPage() {
           )}
         </CardContent>
       </Card>
-      <AuditTimeline key={`session-${id}`} sessionId={id} refreshKey={auditRefresh} />
+      <AuditTimeline
+        key={`session-${id}`}
+        sessionId={id}
+        refreshKey={auditRefresh}
+        onOpenResult={openResultFromAudit}
+      />
       {moveState ? (
         <StockOpnameMoveDialog
           open
@@ -956,7 +994,7 @@ export default function SessionPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <SellFactorDialog
+      <QtyFactorDialog
         key={`${factorTarget?.scope ?? "closed"}-${factorTarget?.scopeId ?? ""}-${factorTarget?.itemCount ?? 0}`}
         open={Boolean(factorTarget)}
         onOpenChange={(open) => { if (!open) setFactorTarget(undefined); }}

@@ -1,10 +1,10 @@
 import { api, type ApiResponse } from "@/lib/api";
 import type {
   Pagination,
-  SellFactorScope,
+  QtyFactorScope,
   SellSummaryResponse,
-  SetSellFactorRequest,
-  SetSellFactorResponse,
+  SetQtyFactorRequest,
+  SetQtyFactorResponse,
   StockOpname,
   StockOpnameCreateRequest,
   StockOpnameMoveRequest,
@@ -18,7 +18,8 @@ type StockOpnameResponse = {
   plu: string;
   product_name: string;
   quantity: number;
-  sell_factor: number;
+  effective_quantity: number;
+  qty_factor: number;
   rak_id: number;
   rak_name: string;
   coordinator_id: number;
@@ -33,7 +34,8 @@ function mapResult(item: StockOpnameResponse): StockOpname {
     plu: item.plu,
     name: item.product_name,
     quantity: item.quantity,
-    sellFactor: (item.sell_factor ?? 1) as StockOpname["sellFactor"],
+    effectiveQuantity: item.effective_quantity ?? item.quantity * (item.qty_factor ?? 1),
+    qtyFactor: (item.qty_factor ?? 1) as StockOpname["qtyFactor"],
     rackId: item.rak_id,
     rackName: item.rak_name,
     coordinatorId: item.coordinator_id,
@@ -79,7 +81,7 @@ export function moveStockOpname(data: StockOpnameMoveRequest) {
   });
 }
 
-export async function setSellFactor(sessionId: number, data: SetSellFactorRequest) {
+export async function setQtyFactor(sessionId: number, data: SetQtyFactorRequest) {
   const body = {
     scope: data.scope,
     scope_id: data.scopeId,
@@ -91,10 +93,10 @@ export async function setSellFactor(sessionId: number, data: SetSellFactorReques
           rak_id: data.filter.rakId,
         }
       : undefined,
-    factor: data.factor,
+    qty_factor: data.qtyFactor,
     note: data.note ?? "",
   };
-  const response = await api<ApiResponse<SetSellFactorResponse>>(`/stockopname/sessions/${sessionId}/sell-factor`, {
+  const response = await api<ApiResponse<SetQtyFactorResponse>>(`/stockopname/sessions/${sessionId}/qty-factor`, {
     method: "PATCH",
     body: JSON.stringify(body),
   });
@@ -108,4 +110,4 @@ export async function getSellSummary(sessionId: number, groupBy: "session" | "co
   return response.data;
 }
 
-export type { SellFactorScope };
+export type { QtyFactorScope };

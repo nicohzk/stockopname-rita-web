@@ -84,6 +84,9 @@ export function UploadTable<TData extends RowData>({
           </TableBody>
         </Table>
       </div>
+      <p className="mt-3 text-xs text-muted-foreground">
+        Nomor upload dapat memiliki gap karena upload tanpa rak aktif tidak ditampilkan.
+      </p>
       <div className="flex flex-wrap items-center justify-end gap-2 pt-4">
         <div className="text-muted-foreground text-sm">
           Page {table.state.pagination.pageIndex + 1} of {table.getPageCount()}

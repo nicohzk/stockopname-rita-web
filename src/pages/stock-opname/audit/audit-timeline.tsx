@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading";
+import { Notice, RetryButton } from "@/components/ui/notice";
 import { formatDateTime } from "@/lib/format-date";
-import { getAuditBatches, getAudits } from "@/services/audit.service";
-import type { AuditAction, AuditBatchSummary, AuditData, AuditEntry } from "@/types/audit";
+import { getAudits, getAuditTimeline } from "@/services/audit.service";
+import type { AuditAction, AuditData, AuditTimelineItem } from "@/types/audit";
+import { describeEntry, factorName } from "./audit-describe";
 
 type Props = {
   sessionId?: number;
@@ -13,6 +16,19 @@ type Props = {
   refreshKey?: number;
   title?: string;
   description?: string;
+  onOpenResult?: (term: string) => void;
+};
+
+type TimelineBatch = Extract<AuditTimelineItem, { kind: "batch" }>;
+
+type TimelineEntry = {
+  id: number;
+  action: AuditAction;
+  actor: string;
+  note: string;
+  created_at: string;
+  before: AuditData | null;
+  after: AuditData | null;
 };
 
 const actionClass: Record<AuditAction, string> = {
@@ -22,48 +38,200 @@ const actionClass: Record<AuditAction, string> = {
   MOVE: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
 };
 
-function rackLabel(entry: AuditEntry) {
-  const before = entry.before?.rak_name;
-  const after = entry.after?.rak_name;
-  if (entry.action === "MOVE") return `${before ?? "-"} → ${after ?? "-"}`;
-  return after ?? before ?? "-";
+const actionLabel: Record<AuditAction, string> = {
+  CREATE: "Tambah",
+  UPDATE: "Ubah",
+  DELETE: "Hapus",
+  MOVE: "Pindah",
+};
+
+const FILTERS: { label: string; actions: AuditAction[] }[] = [
+  { label: "Semua", actions: [] },
+  { label: "Ubah", actions: ["UPDATE"] },
+  { label: "Pindah", actions: ["MOVE"] },
+  { label: "Tambah", actions: ["CREATE"] },
+  { label: "Hapus", actions: ["DELETE"] },
+];
+
+const dayFormatter = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", year: "numeric" });
+
+function dateKey(date: Date): string {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
 
-function qtyLabel(entry: AuditEntry) {
-  const before = entry.before?.quantity;
-  const after = entry.after?.quantity;
-  if (entry.action === "CREATE") return after ?? "-";
-  if (entry.action === "DELETE") return before ?? "-";
-  return `${before ?? "-"} → ${after ?? "-"}`;
+function dayLabel(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (dateKey(date) === dateKey(today)) return "Hari ini";
+  if (dateKey(date) === dateKey(yesterday)) return "Kemarin";
+  return dayFormatter.format(date);
 }
 
-function factorValue(data: AuditData | null | undefined): number {
-  return data?.sell_factor ?? 1;
+type DayGroup<T> = { key: string; label: string; items: T[] };
+
+function groupByDay<T>(items: T[], getDate: (item: T) => string): DayGroup<T>[] {
+  const groups: DayGroup<T>[] = [];
+  for (const item of items) {
+    const value = getDate(item);
+    const key = dateKey(new Date(value));
+    const last = groups[groups.length - 1];
+    if (last && last.key === key) last.items.push(item);
+    else groups.push({ key, label: dayLabel(value), items: [item] });
+  }
+  return groups;
 }
 
-function factorLabel(entry: AuditEntry) {
-  if (entry.action === "CREATE") return factorValue(entry.after);
-  if (entry.action === "DELETE") return factorValue(entry.before);
-  const before = factorValue(entry.before);
-  const after = factorValue(entry.after);
-  return before === after ? after : `${before} → ${after}`;
-}
-
-function AuditRow({ entry }: { entry: AuditEntry }) {
-  const product = entry.after ?? entry.before;
+function ActionBadge({ action }: { action: AuditAction }) {
   return (
-    <div className="flex flex-col gap-1 border-b py-2 last:border-b-0 sm:flex-row sm:items-center sm:gap-3">
-      <span className="w-36 shrink-0 text-xs text-muted-foreground">{formatDateTime(entry.created_at)}</span>
-      <span className={`w-20 shrink-0 rounded-full px-2 py-0.5 text-center text-xs font-medium ${actionClass[entry.action]}`}>
-        {entry.action}
-      </span>
-      <span className="w-24 shrink-0 truncate text-sm">{entry.actor}</span>
-      <span className="min-w-0 flex-1 truncate text-sm">{product?.name ?? "-"}</span>
-      <span className="w-36 shrink-0 truncate text-sm">{rackLabel(entry)}</span>
-      <span className="w-28 shrink-0 text-sm">{qtyLabel(entry)}</span>
-      <span className="w-24 shrink-0 text-sm">Faktor {factorLabel(entry)}</span>
-      <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{entry.note || "-"}</span>
+    <span title={action} className={`rounded-full px-2 py-0.5 text-xs font-medium ${actionClass[action]}`}>
+      {actionLabel[action]}
+    </span>
+  );
+}
+
+function RowShell({ children, nested = false }: { children: ReactNode; nested?: boolean }) {
+  return (
+    <div
+      className={`border-b py-2 last:border-b-0 hover:bg-muted/40 ${
+        nested ? "" : "-mx-2 rounded-md px-2"
+      }`}
+    >
+      {children}
     </div>
+  );
+}
+
+function RowMeta({
+  item,
+  extra,
+}: {
+  item: { created_at: string; actor: string; action: AuditAction };
+  extra?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      <span>{formatDateTime(item.created_at)}</span>
+      <span className="font-medium text-foreground">{item.actor || "-"}</span>
+      <ActionBadge action={item.action} />
+      {extra}
+    </div>
+  );
+}
+
+function Pager({
+  page,
+  totalPages,
+  disabled,
+  onChange,
+}: {
+  page: number;
+  totalPages: number;
+  disabled?: boolean;
+  onChange: (page: number) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+      <Button variant="outline" size="sm" onClick={() => onChange(page - 1)} disabled={disabled || page <= 1}>
+        Sebelumnya
+      </Button>
+      <span className="text-xs text-muted-foreground">
+        Halaman {page} dari {totalPages}
+      </span>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onChange(page + 1)}
+        disabled={disabled || page >= totalPages}
+      >
+        Berikutnya
+      </Button>
+    </div>
+  );
+}
+
+/** Sentence for a batch row; empty when the batch has no useful metadata. */
+function batchSummary(batch: TimelineBatch): string {
+  const parts: string[] = [];
+  if (batch.action === "MOVE") {
+    if (batch.source_rak_name && batch.target_rak_name) {
+      parts.push(`${batch.source_rak_name} → ${batch.target_rak_name}`);
+    }
+    if (batch.merged_count) {
+      parts.push(`${batch.merged_count} digabung`);
+    }
+  } else if (batch.action === "UPDATE" && batch.factor_after !== undefined) {
+    const to = factorName(batch.factor_after);
+    parts.push(
+      batch.factor_before !== undefined ? `faktor ${factorName(batch.factor_before)} → ${to}` : `faktor menjadi ${to}`,
+    );
+  }
+  return parts.join(" · ");
+}
+
+function AuditRow({ entry, onOpenResult }: { entry: TimelineEntry; onOpenResult?: (term: string) => void }) {
+  const { product, change } = describeEntry(entry);
+  const term = entry.after?.barcode || entry.before?.barcode || entry.after?.plu || entry.before?.plu;
+  return (
+    <RowShell nested>
+      <RowMeta item={entry} />
+      <p className="text-sm">
+        {onOpenResult && term ? (
+          <button
+            type="button"
+            title="Lihat di daftar hasil"
+            onClick={() => onOpenResult(term)}
+            className="font-medium underline-offset-2 hover:underline"
+          >
+            {product}
+          </button>
+        ) : (
+          <span className="font-medium">{product}</span>
+        )}
+        <span className="text-muted-foreground"> · {change}</span>
+      </p>
+      {entry.note ? <p className="text-xs text-muted-foreground">Catatan: {entry.note}</p> : null}
+    </RowShell>
+  );
+}
+
+function BatchRow({
+  batch,
+  expanded,
+  onToggle,
+  children,
+}: {
+  batch: TimelineBatch;
+  expanded: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  const summary = batchSummary(batch);
+  return (
+    <RowShell>
+      <RowMeta
+        item={batch}
+        extra={<span className="font-medium text-foreground">{batch.item_count} hasil</span>}
+      />
+      <div className="flex items-start gap-2">
+        <p className="min-w-0 flex-1 text-sm">
+          {summary || "Perubahan massal"}
+          {batch.note ? <span className="text-muted-foreground"> · {batch.note}</span> : null}
+        </p>
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-label={expanded ? "Tutup detail" : "Buka detail"}
+          onClick={onToggle}
+          className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+        </button>
+      </div>
+      {expanded ? <div className="mt-2 ml-1 border-l pl-3">{children}</div> : null}
+    </RowShell>
   );
 }
 
@@ -74,48 +242,33 @@ export default function AuditTimeline({
   refreshKey = 0,
   title = "Riwayat Perubahan",
   description = "Setiap koreksi hasil SO dicatat di sini.",
+  onOpenResult,
 }: Props) {
-  const [batches, setBatches] = useState<AuditBatchSummary[]>([]);
-  const [batchesPage, setBatchesPage] = useState(1);
-  const [batchesTotalPages, setBatchesTotalPages] = useState(1);
-  const [batchesLoading, setBatchesLoading] = useState(true);
-  const [batchesError, setBatchesError] = useState<string>();
-
-  const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [items, setItems] = useState<AuditTimelineItem[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const [actions, setActions] = useState<AuditAction[]>([]);
+  const [retryToken, setRetryToken] = useState(0);
 
   const [expandedBatch, setExpandedBatch] = useState<string>();
-  const [batchEntries, setBatchEntries] = useState<AuditEntry[]>([]);
+  const [batchEntries, setBatchEntries] = useState<TimelineEntry[]>([]);
   const [batchPage, setBatchPage] = useState(1);
   const [batchTotalPages, setBatchTotalPages] = useState(1);
   const [batchLoading, setBatchLoading] = useState(false);
   const [batchError, setBatchError] = useState<string>();
 
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      setBatchesLoading(true);
-      setBatchesError(undefined);
-      try {
-        const result = await getAuditBatches({ sessionId, coordinatorId, resultId, page: batchesPage, limit: 10 });
-        if (!cancelled) {
-          setBatches(result.data);
-          setBatchesTotalPages(result.pagination.total_pages || 1);
-        }
-      } catch (loadError) {
-        if (!cancelled) setBatchesError(loadError instanceof Error ? loadError.message : "Gagal memuat aksi massal.");
-      } finally {
-        if (!cancelled) setBatchesLoading(false);
-      }
-    };
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [sessionId, coordinatorId, resultId, batchesPage, refreshKey]);
+  const retry = () => setRetryToken((value) => value + 1);
+
+  const applyFilter = (next: AuditAction[]) => {
+    const same = next.length === actions.length && next.every((action) => actions.includes(action));
+    if (same) return;
+    setActions(next);
+    setPage(1);
+    setExpandedBatch(undefined);
+    setBatchEntries([]);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -123,9 +276,9 @@ export default function AuditTimeline({
       setLoading(true);
       setError(undefined);
       try {
-        const result = await getAudits({ sessionId, coordinatorId, resultId, page, limit: 10, withoutBatch: true });
+        const result = await getAuditTimeline({ sessionId, coordinatorId, resultId, actions, page, limit: 10 });
         if (!cancelled) {
-          setEntries(result.data);
+          setItems(result.data);
           setTotalPages(result.pagination.total_pages || 1);
         }
       } catch (loadError) {
@@ -138,7 +291,7 @@ export default function AuditTimeline({
     return () => {
       cancelled = true;
     };
-  }, [sessionId, coordinatorId, resultId, page, refreshKey]);
+  }, [sessionId, coordinatorId, resultId, actions, page, refreshKey, retryToken]);
 
   useEffect(() => {
     if (!expandedBatch) return;
@@ -153,7 +306,7 @@ export default function AuditTimeline({
           setBatchTotalPages(result.pagination.total_pages || 1);
         }
       } catch (loadError) {
-        if (!cancelled) setBatchError(loadError instanceof Error ? loadError.message : "Gagal memuat detail batch.");
+        if (!cancelled) setBatchError(loadError instanceof Error ? loadError.message : "Gagal memuat detail perubahan.");
       } finally {
         if (!cancelled) setBatchLoading(false);
       }
@@ -180,92 +333,76 @@ export default function AuditTimeline({
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <section>
-          <h3 className="mb-2 text-sm font-semibold">Aksi Massal</h3>
-          {batchesLoading ? (
-            <LoadingSpinner message="Memuat aksi massal..." />
-          ) : batchesError ? (
-            <p className="text-sm text-destructive">{batchesError}</p>
-          ) : batches.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Belum ada aksi massal.</p>
-          ) : (
-            <div className="space-y-1">
-              {batches.map((batch) => (
-                <div key={batch.batch_id} className="rounded-md border px-2 py-1">
-                  <button
-                    type="button"
-                    className="flex w-full flex-wrap items-center gap-2 text-left text-sm"
-                    onClick={() => toggleBatch(batch.batch_id)}
-                  >
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${actionClass[batch.action]}`}>
-                      {batch.action}
-                    </span>
-                    <span className="font-medium">{batch.item_count} item</span>
-                    <span>{batch.actor}</span>
-                    <span className="truncate text-muted-foreground">{batch.note || "-"}</span>
-                    <span className="ml-auto text-xs text-muted-foreground">{formatDateTime(batch.created_at)}</span>
-                  </button>
-                  {expandedBatch === batch.batch_id ? (
-                    <div className="mt-2 border-t pt-2">
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap gap-1">
+          {FILTERS.map((filter) => {
+            const active =
+              filter.actions.length === actions.length && filter.actions.every((action) => actions.includes(action));
+            return (
+              <Button
+                key={filter.label}
+                size="sm"
+                variant={active ? "default" : "outline"}
+                aria-pressed={active}
+                onClick={() => applyFilter(filter.actions)}
+              >
+                {filter.label}
+              </Button>
+            );
+          })}
+        </div>
+
+        {error ? (
+          <Notice tone="error" message={error} action={<RetryButton onRetry={retry} retrying={loading} />} />
+        ) : null}
+
+        {loading && items.length === 0 ? (
+          <LoadingSpinner message="Memuat riwayat perubahan..." />
+        ) : items.length === 0 ? (
+          !error ? (
+            <p className="text-sm text-muted-foreground">
+              {actions.length === 0 ? "Belum ada perubahan." : "Tidak ada perubahan untuk filter ini."}
+            </p>
+          ) : null
+        ) : (
+          <div>
+            {groupByDay(items, (item) => item.created_at).map((group) => (
+              <div key={group.key}>
+                <h4 className="pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {group.label}
+                </h4>
+                {group.items.map((item) =>
+                  item.kind === "batch" ? (
+                    <BatchRow
+                      key={`batch-${item.batch_id}`}
+                      batch={item}
+                      expanded={expandedBatch === item.batch_id}
+                      onToggle={() => toggleBatch(item.batch_id)}
+                    >
                       {batchLoading ? (
-                        <LoadingSpinner message="Memuat detail batch..." />
+                        <LoadingSpinner message="Memuat detail perubahan..." />
                       ) : batchError ? (
                         <p className="text-sm text-destructive">{batchError}</p>
+                      ) : batchEntries.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Tidak ada item pada perubahan ini.</p>
                       ) : (
                         <>
-                          {batchEntries.map((entry) => <AuditRow key={entry.id} entry={entry} />)}
-                          <div className="flex items-center justify-end gap-2 pt-2">
-                            <Button variant="outline" size="sm" onClick={() => setBatchPage((value) => Math.max(1, value - 1))} disabled={batchPage <= 1 || batchLoading}>
-                              Previous
-                            </Button>
-                            <span className="text-xs text-muted-foreground">Page {batchPage} of {batchTotalPages}</span>
-                            <Button variant="outline" size="sm" onClick={() => setBatchPage((value) => Math.min(batchTotalPages, value + 1))} disabled={batchPage >= batchTotalPages || batchLoading}>
-                              Next
-                            </Button>
-                          </div>
+                          {batchEntries.map((entry) => (
+                            <AuditRow key={entry.id} entry={entry} onOpenResult={onOpenResult} />
+                          ))}
+                          <Pager page={batchPage} totalPages={batchTotalPages} disabled={batchLoading} onChange={setBatchPage} />
                         </>
                       )}
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <Button variant="outline" size="sm" onClick={() => setBatchesPage((value) => Math.max(1, value - 1))} disabled={batchesPage <= 1 || batchesLoading}>
-                  Previous
-                </Button>
-                <span className="text-xs text-muted-foreground">Page {batchesPage} of {batchesTotalPages}</span>
-                <Button variant="outline" size="sm" onClick={() => setBatchesPage((value) => Math.min(batchesTotalPages, value + 1))} disabled={batchesPage >= batchesTotalPages || batchesLoading}>
-                  Next
-                </Button>
+                    </BatchRow>
+                  ) : (
+                    <AuditRow key={`entry-${item.id}`} entry={item} onOpenResult={onOpenResult} />
+                  ),
+                )}
               </div>
-            </div>
-          )}
-        </section>
-
-        <section>
-          <h3 className="mb-2 text-sm font-semibold">Perubahan Satuan</h3>
-          {loading ? (
-            <LoadingSpinner message="Memuat riwayat perubahan..." />
-          ) : error ? (
-            <p className="text-sm text-destructive">{error}</p>
-          ) : entries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Belum ada perubahan satuan.</p>
-          ) : (
-            <div className="space-y-1">
-              {entries.map((entry) => <AuditRow key={entry.id} entry={entry} />)}
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <Button variant="outline" size="sm" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={page <= 1 || loading}>
-                  Previous
-                </Button>
-                <span className="text-xs text-muted-foreground">Page {page} of {totalPages}</span>
-                <Button variant="outline" size="sm" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={page >= totalPages || loading}>
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
-        </section>
+            ))}
+            <Pager page={page} totalPages={totalPages} disabled={loading} onChange={setPage} />
+          </div>
+        )}
       </CardContent>
     </Card>
   );
