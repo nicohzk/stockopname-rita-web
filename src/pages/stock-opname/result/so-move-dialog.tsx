@@ -67,7 +67,7 @@ export default function StockOpnameMoveDialog({
         <DialogHeader>
           <DialogTitle>Pindahkan Hasil SO</DialogTitle>
           <DialogDescription>
-            Laporan upload memakai data terkini. Jika rak asal menjadi kosong, upload-nya dibuka dan rak bisa diupload ulang.
+            Item tetap milik upload asalnya walau dipindah rak. Jika tidak ada lagi item milik upload di rak asal, upload itu dilepas dari rak tersebut.
             Perubahan dicatat di audit.
           </DialogDescription>
         </DialogHeader>
@@ -82,9 +82,9 @@ export default function StockOpnameMoveDialog({
             )}
           </div>
 
-          {sourceRack?.uploadedAt ? (
+          {sourceRack && !sourceRack.canUpload ? (
             <p className="text-sm text-amber-700 dark:text-amber-300">
-              Jika semua item dipindah, upload rak asal akan dibuka dan rak bisa diupload ulang.
+              Jika tidak ada lagi item milik upload di rak asal, upload itu dilepas dan rak bisa diupload ulang.
             </p>
           ) : null}
 
@@ -101,15 +101,15 @@ export default function StockOpnameMoveDialog({
               {targetRacks.map((rack) => (
                 <option key={rack.id} value={rack.id}>
                   {rack.name} · {coordinatorCode(rack.coordinatorId)}
-                  {rack.uploadedAt ? " (sudah upload)" : ""}
+                  {rack.canUpload ? "" : " (sudah upload)"}
                 </option>
               ))}
             </select>
           </div>
 
-          {targetRack?.uploadedAt ? (
+          {targetRack && sourceRack && targetRack.coordinatorId !== sourceRack.coordinatorId ? (
             <p className="text-sm text-amber-700 dark:text-amber-300">
-              Item akan muncul di laporan upload rak tujuan karena laporan memakai data terkini.
+              Item akan keluar dari upload asal dan menjadi bagian koordinator tujuan (atau Belum upload).
             </p>
           ) : null}
 

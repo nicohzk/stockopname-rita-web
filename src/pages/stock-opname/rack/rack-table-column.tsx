@@ -32,7 +32,7 @@ export const createColumns = (
       id: "upload",
       header: "Upload",
       size: 110,
-      cell: ({ row }) => (row.original.uploadedAt ? "Sudah" : "Belum"),
+      cell: ({ row }) => (row.original.canUpload ? "Belum" : "Sudah"),
     }),
     columnHelper.display({
       id: "actions",
