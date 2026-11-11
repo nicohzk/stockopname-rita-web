@@ -8,6 +8,8 @@ import { TruncatedText } from "@/components/ui/table";
 
 const columnHelper = createColumnHelper<DataTableFeatures, StockOpname>();
 
+const quantityFormatter = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 });
+
 export const createColumns = (onUpdate: (id: number, data: StockOpnameUpdateRequest) => Promise<void>, onDelete: (id: number) => Promise<void>, onMove?: (item: StockOpname) => void, readOnly: boolean | ((item: StockOpname) => boolean) = false, onFactor?: (item: StockOpname) => void) => columnHelper.columns([
   columnHelper.accessor("barcode", {
     header: "Barcode",
@@ -21,12 +23,13 @@ export const createColumns = (onUpdate: (id: number, data: StockOpnameUpdateRequ
   }),
   columnHelper.accessor("name", {
     header: "Nama Barang",
-    size: 150,
+    size: 220,
     cell: (info) => <TruncatedText>{info.getValue()}</TruncatedText>,
   }),
   columnHelper.accessor("effectiveQuantity", {
     header: "Jumlah",
-    size: 90,
+    size: 64,
+    cell: (info) => <span className="tabular-nums">{quantityFormatter.format(info.getValue())}</span>,
   }),
   columnHelper.accessor("rackName", {
     header: "Rak",
@@ -34,7 +37,7 @@ export const createColumns = (onUpdate: (id: number, data: StockOpnameUpdateRequ
   }),
   columnHelper.accessor("coordinator", {
     header: "Koordinator",
-    size: 80,
+    size: 90,
   }),
   columnHelper.accessor("updatedAt", {
     header: "Tanggal Update",

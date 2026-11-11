@@ -840,8 +840,12 @@ export default function SessionPage() {
             filtered={filterActive}
             count={selectionMode === "filter" ? resultTotalItems : selectedCount}
             onFactor={selectionMode === "filter" ? openBulkFactor : openSelectedFactor}
-            onMove={selectionMode === "filter" ? undefined : openSelectedMove}
-            moveDisabledReason={selectionMode === "filter" ? undefined : moveDisabledReason}
+            onMove={openSelectedMove}
+            moveDisabledReason={
+              selectionMode === "filter"
+                ? "Mode filter bisa mencakup banyak rak. Pindahkan hanya tersedia untuk pilihan manual dari satu rak."
+                : moveDisabledReason
+            }
             onClear={clearSelection}
           />
           {resultsFailed && results.length === 0 ? (
