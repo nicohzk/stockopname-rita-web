@@ -1,4 +1,6 @@
+import { ListChecks } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { SelectionMode } from "@/types/stock-opname";
 
 type Props = {
@@ -22,14 +24,32 @@ export default function ResultSelectionBar({
 }: Props) {
   if (count === 0) return null;
 
+  // Dua keadaan ini sering tertukar kalau gayanya sama: "memilih semua hasil"
+  // bukan sekadar pilihan manual yang lebih banyak.
+  const allSelected = mode === "filter";
+
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-sm">
-      <span className="font-medium">
-        {count} item {mode === "filter" ? `(semua hasil${filtered ? " filter" : ""})` : "dipilih"}
+    <div
+      role="status"
+      className={cn(
+        "mb-3 flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-sm",
+        allSelected
+          ? "border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-50"
+          : "bg-muted/40",
+      )}
+    >
+      {allSelected ? <ListChecks className="h-4 w-4 shrink-0" /> : null}
+
+      <span className="font-semibold">
+        {allSelected
+          ? `Semua ${count} baris dipilih${filtered ? " (sesuai filter)" : ""}`
+          : `${count} baris dipilih`}
       </span>
-      {mode === "filter" ? (
-        <span className="text-muted-foreground">Centang baris untuk memilih manual.</span>
-      ) : null}
+
+      <span className={allSelected ? "text-emerald-700 dark:text-emerald-300/80" : "text-muted-foreground"}>
+        {allSelected ? "Termasuk baris di halaman lain." : "Centang baris lain untuk menambah."}
+      </span>
+
       <div className="ml-auto flex flex-wrap gap-2">
         <Button size="sm" onClick={onFactor}>
           Faktor Qty
@@ -46,7 +66,7 @@ export default function ResultSelectionBar({
           </Button>
         ) : null}
         <Button size="sm" variant="ghost" onClick={onClear}>
-          Bersihkan
+          Batalkan pilihan
         </Button>
       </div>
     </div>
