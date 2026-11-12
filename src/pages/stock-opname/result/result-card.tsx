@@ -47,12 +47,10 @@ export default function ResultCard({
           filtered={table.filterActive}
           count={table.selectionMode === "filter" ? table.totalItems : table.selectedCount}
           onFactor={table.selectionMode === "filter" ? table.openBulkFactor : table.openSelectedFactor}
-          onMove={table.openSelectedMove}
-          moveDisabledReason={
-            table.selectionMode === "filter"
-              ? "Mode filter bisa mencakup banyak rak. Pindahkan hanya tersedia untuk pilihan manual dari satu rak."
-              : table.moveDisabledReason
-          }
+          // Pindahkan hanya masuk akal untuk pilihan manual dari satu rak. Saat
+          // "pilih semua" aktif, tombolnya disembunyikan, bukan sekadar dimatikan.
+          onMove={table.selectionMode === "filter" ? undefined : table.openSelectedMove}
+          moveDisabledReason={table.selectionMode === "filter" ? undefined : table.moveDisabledReason}
           onClear={table.clearSelection}
         />
         {table.failed && table.results.length === 0 ? (
@@ -78,7 +76,9 @@ export default function ResultCard({
                 table.openItemFactor,
               )}
               data={table.results}
-              selectable
+              // Di mode pilih semua, seleksi tidak per baris melainkan penanda
+              // mode. Kolom centang yang tetap kosong hanya membingungkan.
+              selectable={table.selectionMode !== "filter"}
               rowSelection={table.rowSelection}
               onRowSelectionChange={table.handleRowSelectionChange}
               getRowId={(item) => String(item.id)}

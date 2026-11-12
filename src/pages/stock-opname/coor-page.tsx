@@ -532,12 +532,12 @@ export default function CoorPage() {
                 </option>
               ))}
             </select>
-            {table.totalItems > 0 ? (
+            {table.totalItems > 0 && selectionMode !== "filter" ? (
               <Button
-                variant={selectionMode === "filter" ? "default" : "outline"}
+                variant="outline"
                 size="sm"
                 onClick={activateFilterMode}
-                disabled={selectionMode === "filter" || table.totalItems > 1000}
+                disabled={table.totalItems > 1000}
                 title={
                   table.totalItems > 1000
                     ? table.filterActive
