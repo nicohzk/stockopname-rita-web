@@ -34,6 +34,9 @@ export default function ProductPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [productsLoading, setProductsLoading] = useState(true);
+  // Tabel tetap terpasang setelah pemuatan pertama; kalau diganti spinner saat
+  // mencari, input pencarian ikut dilepas dan fokusnya hilang.
+  const [productsLoadedOnce, setProductsLoadedOnce] = useState(false);
   const [error, setError] = useState<string>();
   const [productsError, setProductsError] = useState<string>();
   const [reloadKey, setReloadKey] = useState(0);
@@ -113,7 +116,10 @@ export default function ProductPage() {
             : "Gagal memuat data produk.",
         );
       } finally {
-        if (!cancelled) setProductsLoading(false);
+        if (!cancelled) {
+          setProductsLoading(false);
+          setProductsLoadedOnce(true);
+        }
       }
     };
     void run();
@@ -185,7 +191,7 @@ export default function ProductPage() {
           <CardTitle>Barcode</CardTitle>
         </CardHeader>
         <CardContent>
-          {productsLoading && !products.length ? (
+          {productsLoading && !productsLoadedOnce ? (
             <div className="flex h-40 items-center justify-center">
               <LoadingSpinner message="Memuat data produk..." />
             </div>

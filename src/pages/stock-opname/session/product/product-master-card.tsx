@@ -29,6 +29,10 @@ export default function ProductMasterCard({
   const [error, setError] = useState<string>();
   const [refreshWarning, setRefreshWarning] = useState<string>();
   const [loading, setLoading] = useState(true);
+  // Spinner besar hanya untuk pemuatan pertama. Setelah itu tabel tetap
+  // terpasang: menggantinya saat mencari akan melepas input pencarian dan
+  // membuat fokus keyboard hilang di tengah mengetik.
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const { showToast } = useToast();
   const navigate = useNavigate();
   const readOnly = sessionStatus !== "IN_PROGRESS";
@@ -95,7 +99,10 @@ export default function ProductMasterCard({
         if (cancelled) return;
         setError(loadError instanceof Error ? loadError.message : "Gagal memuat data produk.");
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setHasLoadedOnce(true);
+        }
       }
     };
     void run();
@@ -161,7 +168,7 @@ export default function ProductMasterCard({
             }
           />
         ) : null}
-        {loading && !products.length ? (
+        {loading && !hasLoadedOnce ? (
           <div className="flex h-40 items-center justify-center">
             <LoadingSpinner message="Memuat data produk..." />
           </div>

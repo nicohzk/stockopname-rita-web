@@ -1,4 +1,4 @@
-import { api, apiForm, type ApiResponse } from "@/lib/api";
+import { api, apiFormWithProgress, type ApiResponse, type UploadProgress } from "@/lib/api";
 import type { CreateProductRequest, ImportResult, Product, ProductResponse, UpdateProductRequest } from "@/types/product";
 import type { Pagination } from "@/types/stock-opname";
 
@@ -47,13 +47,28 @@ export async function updateProduct(
   });
 }
 
-export async function importProducts(produk: File, barcode: File, sessionId: number, dryRun = false) {
+export async function importProducts(
+  produk: File,
+  barcode: File,
+  sessionId: number,
+  dryRun = false,
+  callbacks: {
+    onUploadProgress?: (progress: UploadProgress) => void;
+    onUploadComplete?: () => void;
+  } = {},
+) {
   const form = new FormData();
   form.append("produk", produk);
   form.append("barcode", barcode);
   const query = new URLSearchParams({ sessionId: String(sessionId) });
   if (dryRun) query.set("dry_run", "true");
-  const response = await apiForm<ApiResponse<ImportResult>>(`/products/import?${query}`, form);
+  const response = await apiFormWithProgress<ApiResponse<ImportResult>>(`/products/import?${query}`, form, {
+    // Puluhan ribu baris bisa jauh melewati batas dua menit yang dipakai
+    // permintaan biasa.
+    timeoutMs: 300_000,
+    onUploadProgress: callbacks.onUploadProgress,
+    onUploadComplete: callbacks.onUploadComplete,
+  });
   return response.data;
 }
 

@@ -7,13 +7,21 @@ import { AlertDialog } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/toast";
 import { clearProducts, importProducts } from "@/services/product.service";
 import type { ImportResult } from "@/types/product";
+import { ImportProgressPanel } from "./import-progress";
+import { useImportJob, type ImportPhase } from "./use-import-job";
+
+function submitLabel(phase: ImportPhase, progress: number, dryRun: boolean): string {
+  if (phase === "uploading") return progress >= 0 ? `Mengunggah ${progress}%` : "Mengunggah…";
+  if (phase === "processing") return "Memproses…";
+  return dryRun ? "Validasi" : "Import";
+}
 
 export function ProductImportCard({ sessionId, onImported }: { sessionId: number; onImported: () => void }) {
   const [produk, setProduk] = useState<File | null>(null);
   const [barcode, setBarcode] = useState<File | null>(null);
   const [dryRun, setDryRun] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const job = useImportJob();
   const { showToast } = useToast();
 
   const handleSubmit = async (e: FormEvent) => {
@@ -22,16 +30,19 @@ export function ProductImportCard({ sessionId, onImported }: { sessionId: number
       showToast("File PRODUK.DBF dan BARCODE.DBF wajib diisi.", "error");
       return;
     }
-    setLoading(true);
+
+    setResult(null);
+    job.start();
+
     try {
-      const res = await importProducts(produk, barcode, sessionId, dryRun);
+      const res = await importProducts(produk, barcode, sessionId, dryRun, job.callbacks);
       setResult(res);
       showToast(dryRun ? "Validasi dry-run selesai." : "Master data berhasil diimpor.");
       if (!dryRun) onImported();
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Gagal mengimpor master data.", "error");
     } finally {
-      setLoading(false);
+      job.stop();
     }
   };
 
@@ -42,21 +53,33 @@ export function ProductImportCard({ sessionId, onImported }: { sessionId: number
         <CardDescription>Upload PRODUK.DBF dan BARCODE.DBF. Centang dry-run untuk validasi tanpa menulis.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form className="grid gap-4 sm:grid-cols-2" onSubmit={handleSubmit}>
+        <form className="grid gap-4 sm:grid-cols-2" onSubmit={handleSubmit} aria-busy={job.busy}>
           <div className="space-y-2">
             <Label htmlFor="produk-file">PRODUK.DBF</Label>
-            <Input id="produk-file" type="file" accept=".dbf,.DBF" onChange={(e) => setProduk(e.target.files?.[0] ?? null)} />
+            <Input id="produk-file" type="file" accept=".dbf,.DBF" disabled={job.busy} onChange={(e) => setProduk(e.target.files?.[0] ?? null)} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="barcode-file">BARCODE.DBF</Label>
-            <Input id="barcode-file" type="file" accept=".dbf,.DBF" onChange={(e) => setBarcode(e.target.files?.[0] ?? null)} />
+            <Input id="barcode-file" type="file" accept=".dbf,.DBF" disabled={job.busy} onChange={(e) => setBarcode(e.target.files?.[0] ?? null)} />
           </div>
           <label className="flex items-center gap-2 text-sm sm:col-span-2">
-            <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun(e.target.checked)} />
+            <input type="checkbox" checked={dryRun} disabled={job.busy} onChange={(e) => setDryRun(e.target.checked)} />
             Dry-run (validasi saja, tidak menulis)
           </label>
+
+          <ImportProgressPanel
+            className="sm:col-span-2"
+            phase={job.phase}
+            progress={job.progress}
+            loaded={job.bytes.loaded}
+            total={job.bytes.total}
+            elapsed={job.elapsed}
+          />
+
           <div className="sm:col-span-2">
-            <Button type="submit" disabled={loading || !produk || !barcode}>{loading ? "Memproses..." : dryRun ? "Validasi" : "Import"}</Button>
+            <Button type="submit" disabled={job.busy || !produk || !barcode}>
+              {submitLabel(job.phase, job.progress, dryRun)}
+            </Button>
           </div>
         </form>
         {result && (

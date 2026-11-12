@@ -7,6 +7,7 @@ import { importProducts } from "@/services/product.service";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/toast";
 import SessionAddBtn from "./session/session-add-btn";
+import type { ImportCallbacks } from "./session/product/use-import-job";
 import StockOpnameSummaryCards from "./stock-opname-summary-cards";
 import type { SessionCreateRequest } from "@/types/session";
 import {
@@ -122,30 +123,42 @@ export default function StockOpnamePage() {
       });
     return () => { cancelled = true; };
   }, []);
-  const handleCreate = async (data: SessionCreateRequest, produk: File, barcode: File) => {
-    let session;
+  const handleCreateSession = async (data: SessionCreateRequest) => {
     try {
-      session = await createSession(data);
+      const session = await createSession(data);
+      return session.id;
     } catch (mutationError) {
       showToast(mutationError instanceof Error ? mutationError.message : "Gagal menambahkan sesi.", "error");
       throw mutationError;
     }
+  };
 
+  // Dipisah dari pembuatan sesi supaya wizard bisa memvalidasi dulu (dry-run)
+  // lalu menulis pada sesi yang sama, tanpa membuat sesi kedua.
+  const handleImportMaster = async (
+    sessionId: number,
+    files: { produk: File; barcode: File },
+    dryRun: boolean,
+    callbacks: ImportCallbacks,
+  ) => {
     try {
-      await importProducts(produk, barcode, session.id);
-      showToast("Sesi dan produk berhasil dibuat.");
+      return await importProducts(files.produk, files.barcode, sessionId, dryRun, callbacks);
     } catch (importError) {
       showToast(
         importError instanceof Error
-          ? `Sesi dibuat, tetapi import gagal: ${importError.message}`
-          : "Sesi dibuat, tetapi import produk gagal. Coba import ulang dari detail sesi.",
+          ? `Sesi sudah dibuat, tetapi import gagal: ${importError.message}`
+          : "Sesi sudah dibuat, tetapi import produk gagal. Coba impor ulang dari halaman Master Produk.",
         "error",
       );
+      throw importError;
     }
+  };
 
+  const handleSessionFinished = async (sessionId: number) => {
+    showToast("Sesi dan produk berhasil dibuat.");
     await loadSessions(page, search);
     void refreshSummary();
-    navigate(`/stock-opname/sesi/${session.id}`);
+    navigate(`/stock-opname/sesi/${sessionId}`);
   };
   return (
     <div className="min-w-0 p-0 sm:p-2">
@@ -169,7 +182,7 @@ export default function StockOpnamePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <SessionTable columns={columns} data={sessions} addButton={<SessionAddBtn onSubmit={handleCreate} />} error={error} onSearch={setSearchInput} searchValue={searchInput} loading={loading} page={page} totalPages={totalPages} onPageChange={handlePageChange} />
+          <SessionTable columns={columns} data={sessions} addButton={<SessionAddBtn onCreate={handleCreateSession} onImport={handleImportMaster} onFinished={handleSessionFinished} />} error={error} onSearch={setSearchInput} searchValue={searchInput} loading={loading} page={page} totalPages={totalPages} onPageChange={handlePageChange} />
         </CardContent>
       </Card>
     </div>
