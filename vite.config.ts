@@ -11,4 +11,15 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      // Dev memakai jalur yang sama dengan produksi ("/api"), jadi cookie sesi
+      // tetap first-party dan tidak ada CORS yang perlu diatur di lokal.
+      "/api": {
+        target: "http://localhost:8080",
+        changeOrigin: false,
+        rewrite: (route) => route.replace(/^\/api/, ""),
+      },
+    },
+  },
 })
