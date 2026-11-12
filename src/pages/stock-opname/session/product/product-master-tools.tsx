@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,18 +7,8 @@ import { AlertDialog } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/toast";
 import { clearProducts, importProducts } from "@/services/product.service";
 import type { ImportResult } from "@/types/product";
-
-type ImportPhase = "idle" | "uploading" | "processing";
-
-function formatBytes(value: number): string {
-  if (!Number.isFinite(value) || value <= 0) return "0 B";
-
-  const units = ["B", "KB", "MB", "GB"];
-  const exponent = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
-  const size = value / 1024 ** exponent;
-
-  return `${size.toFixed(exponent === 0 ? 0 : 1)} ${units[exponent]}`;
-}
+import { ImportProgressPanel } from "./import-progress";
+import { useImportJob, type ImportPhase } from "./use-import-job";
 
 function submitLabel(phase: ImportPhase, progress: number, dryRun: boolean): string {
   if (phase === "uploading") return progress >= 0 ? `Mengunggah ${progress}%` : "Mengunggah…";
@@ -30,39 +20,9 @@ export function ProductImportCard({ sessionId, onImported }: { sessionId: number
   const [produk, setProduk] = useState<File | null>(null);
   const [barcode, setBarcode] = useState<File | null>(null);
   const [dryRun, setDryRun] = useState(false);
-  const [phase, setPhase] = useState<ImportPhase>("idle");
-  const [progress, setProgress] = useState(0);
-  const [bytes, setBytes] = useState({ loaded: 0, total: 0 });
-  const [elapsed, setElapsed] = useState(0);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const job = useImportJob();
   const { showToast } = useToast();
-
-  const busy = phase !== "idle";
-
-  // Setelah unggahan selesai, server masih mengolah puluhan ribu baris tanpa
-  // mengirim kabar apa pun. Detik berjalan inilah tanda bahwa aplikasi hidup.
-  useEffect(() => {
-    if (!busy) return;
-
-    const started = Date.now();
-    const timer = window.setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000);
-
-    return () => window.clearInterval(timer);
-  }, [busy]);
-
-  // Impor besar bisa berjalan menit-menitan; jangan biarkan tab tertutup tanpa
-  // peringatan.
-  useEffect(() => {
-    if (!busy) return;
-
-    const warn = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [busy]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -72,29 +32,17 @@ export function ProductImportCard({ sessionId, onImported }: { sessionId: number
     }
 
     setResult(null);
-    setProgress(0);
-    setElapsed(0);
-    setBytes({ loaded: 0, total: 0 });
-    setPhase("uploading");
+    job.start();
 
     try {
-      const res = await importProducts(produk, barcode, sessionId, dryRun, {
-        onUploadProgress: (next) => {
-          setBytes({ loaded: next.loaded, total: next.total });
-          if (next.percent >= 0) setProgress(next.percent);
-          // Sebagian browser tidak memicu onUploadComplete; persen 100 dipakai
-          // sebagai penanda yang sama.
-          if (next.percent >= 100) setPhase("processing");
-        },
-        onUploadComplete: () => setPhase("processing"),
-      });
+      const res = await importProducts(produk, barcode, sessionId, dryRun, job.callbacks);
       setResult(res);
       showToast(dryRun ? "Validasi dry-run selesai." : "Master data berhasil diimpor.");
       if (!dryRun) onImported();
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Gagal mengimpor master data.", "error");
     } finally {
-      setPhase("idle");
+      job.stop();
     }
   };
 
@@ -105,58 +53,32 @@ export function ProductImportCard({ sessionId, onImported }: { sessionId: number
         <CardDescription>Upload PRODUK.DBF dan BARCODE.DBF. Centang dry-run untuk validasi tanpa menulis.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form className="grid gap-4 sm:grid-cols-2" onSubmit={handleSubmit} aria-busy={busy}>
+        <form className="grid gap-4 sm:grid-cols-2" onSubmit={handleSubmit} aria-busy={job.busy}>
           <div className="space-y-2">
             <Label htmlFor="produk-file">PRODUK.DBF</Label>
-            <Input id="produk-file" type="file" accept=".dbf,.DBF" disabled={busy} onChange={(e) => setProduk(e.target.files?.[0] ?? null)} />
+            <Input id="produk-file" type="file" accept=".dbf,.DBF" disabled={job.busy} onChange={(e) => setProduk(e.target.files?.[0] ?? null)} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="barcode-file">BARCODE.DBF</Label>
-            <Input id="barcode-file" type="file" accept=".dbf,.DBF" disabled={busy} onChange={(e) => setBarcode(e.target.files?.[0] ?? null)} />
+            <Input id="barcode-file" type="file" accept=".dbf,.DBF" disabled={job.busy} onChange={(e) => setBarcode(e.target.files?.[0] ?? null)} />
           </div>
           <label className="flex items-center gap-2 text-sm sm:col-span-2">
-            <input type="checkbox" checked={dryRun} disabled={busy} onChange={(e) => setDryRun(e.target.checked)} />
+            <input type="checkbox" checked={dryRun} disabled={job.busy} onChange={(e) => setDryRun(e.target.checked)} />
             Dry-run (validasi saja, tidak menulis)
           </label>
 
-          {busy && (
-            <div className="space-y-2 rounded-lg border bg-muted/40 p-4 sm:col-span-2">
-              <div className="flex items-center justify-between gap-3 text-sm">
-                <span className="font-medium">
-                  {phase === "uploading" ? "Mengunggah berkas…" : "Memproses di server…"}
-                </span>
-                <span className="tabular-nums text-muted-foreground">{elapsed}s</span>
-              </div>
-
-              <div
-                className="h-2 overflow-hidden rounded-full bg-muted"
-                role="progressbar"
-                aria-label="Progres impor master data"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={phase === "uploading" && progress >= 0 ? progress : undefined}
-              >
-                <div
-                  className={
-                    phase === "uploading"
-                      ? "h-full rounded-full bg-primary transition-[width] duration-200"
-                      : "h-full w-1/3 animate-pulse rounded-full bg-primary"
-                  }
-                  style={phase === "uploading" ? { width: `${Math.max(progress, 5)}%` } : undefined}
-                />
-              </div>
-
-              <p className="text-xs text-muted-foreground">
-                {phase === "uploading"
-                  ? `${formatBytes(bytes.loaded)} dari ${formatBytes(bytes.total)}`
-                  : "Jangan tutup atau muat ulang halaman. Impor puluhan ribu baris bisa berjalan beberapa menit."}
-              </p>
-            </div>
-          )}
+          <ImportProgressPanel
+            className="sm:col-span-2"
+            phase={job.phase}
+            progress={job.progress}
+            loaded={job.bytes.loaded}
+            total={job.bytes.total}
+            elapsed={job.elapsed}
+          />
 
           <div className="sm:col-span-2">
-            <Button type="submit" disabled={busy || !produk || !barcode}>
-              {submitLabel(phase, progress, dryRun)}
+            <Button type="submit" disabled={job.busy || !produk || !barcode}>
+              {submitLabel(job.phase, job.progress, dryRun)}
             </Button>
           </div>
         </form>

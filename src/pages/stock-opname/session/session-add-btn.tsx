@@ -9,13 +9,23 @@ import {
 import { Separator } from "@/components/ui/separator";
 import SessionAddForm from "./session-add-form";
 import { useState } from "react";
+import type { ImportResult } from "@/types/product";
 import type { SessionCreateRequest } from "@/types/session";
+import type { ImportCallbacks } from "./product/use-import-job";
 
-export default function SessionAddBtn({ onSubmit }: { onSubmit: (data: SessionCreateRequest, produk: File, barcode: File) => Promise<void> }) {
+type SessionFiles = { produk: File; barcode: File };
+
+export default function SessionAddBtn({
+  onCreate,
+  onImport,
+  onFinished,
+}: {
+  onCreate: (data: SessionCreateRequest) => Promise<number>;
+  onImport: (sessionId: number, files: SessionFiles, dryRun: boolean, callbacks: ImportCallbacks) => Promise<ImportResult>;
+  onFinished: (sessionId: number) => void;
+}) {
   const [open, setOpen] = useState(false);
-  const handleSubmit = async (data: SessionCreateRequest, produk: File, barcode: File) => {
-    try { await onSubmit(data, produk, barcode); setOpen(false); } catch { /* error sudah ditampilkan parent */ }
-  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button>Tambah Sesi</Button>} />
@@ -25,7 +35,15 @@ export default function SessionAddBtn({ onSubmit }: { onSubmit: (data: SessionCr
           <DialogTitle>Tambah Sesi</DialogTitle>
           <Separator></Separator>
         </DialogHeader>
-          <SessionAddForm onSubmit={handleSubmit} />
+        <SessionAddForm
+          onCreate={onCreate}
+          onImport={onImport}
+          onFinished={(sessionId) => {
+            setOpen(false);
+            onFinished(sessionId);
+          }}
+          onClose={() => setOpen(false)}
+        />
       </DialogContent>
     </Dialog>
   );
