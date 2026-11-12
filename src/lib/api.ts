@@ -109,6 +109,86 @@ export async function apiForm<T>(endpoint: string, form: FormData, options?: Req
   return response.json() as Promise<T>;
 }
 
+export type UploadProgress = {
+  loaded: number;
+  total: number;
+  /** 0-100, atau -1 kalau browser tidak memberi tahu ukuran totalnya. */
+  percent: number;
+};
+
+type UploadOptions = {
+  timeoutMs?: number;
+  onUploadProgress?: (progress: UploadProgress) => void;
+  /** Dipanggil sekali saat semua byte sudah terkirim, sebelum server menjawab. */
+  onUploadComplete?: () => void;
+};
+
+function messageFromBody(body: unknown, fallback: string): string {
+  if (body && typeof body === "object" && "message" in body) {
+    const { message } = body as { message?: unknown };
+    if (typeof message === "string" && message.trim() !== "") {
+      return message;
+    }
+  }
+  return fallback;
+}
+
+/**
+ * apiForm dengan progres unggah. fetch() tidak melaporkan berapa byte yang
+ * sudah terkirim, jadi jalur ini memakai XMLHttpRequest — satu-satunya cara
+ * memberi tahu pengguna bahwa unggahan besar masih berjalan.
+ */
+export function apiFormWithProgress<T>(
+  endpoint: string,
+  form: FormData,
+  options: UploadOptions = {},
+): Promise<T> {
+  const { timeoutMs = 300_000, onUploadProgress, onUploadComplete } = options;
+
+  return new Promise<T>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("POST", `${API_BASE_URL}${endpoint}`);
+    request.timeout = timeoutMs;
+    // Same-origin tetap mengirim cookie, tapi ini menjaga perilakunya sama
+    // kalau API suatu saat dibuka di host lain.
+    request.withCredentials = true;
+
+    request.upload.onprogress = (event) => {
+      if (!onUploadProgress) return;
+      const percent = event.lengthComputable && event.total > 0
+        ? Math.round((event.loaded / event.total) * 100)
+        : -1;
+      onUploadProgress({ loaded: event.loaded, total: event.total, percent });
+    };
+
+    if (onUploadComplete) {
+      request.upload.onload = () => onUploadComplete();
+    }
+
+    request.onload = () => {
+      let body: unknown = null;
+      try {
+        body = JSON.parse(request.responseText);
+      } catch {
+        // Bukan JSON (mis. halaman error nginx) — pesan generik di bawah.
+      }
+
+      if (request.status < 200 || request.status >= 300) {
+        if (request.status === 401) notifyUnauthorized(endpoint);
+        reject(new Error(messageFromBody(body, `API Error: ${request.status}`)));
+        return;
+      }
+
+      resolve(body as T);
+    };
+
+    request.onerror = () => reject(new Error("Koneksi terputus saat mengunggah. Coba lagi."));
+    request.ontimeout = () => reject(new Error("Permintaan timeout. Coba lagi."));
+
+    request.send(form);
+  });
+}
+
 export type ApiResponse<T> = {
   message: string;
   data: T;
