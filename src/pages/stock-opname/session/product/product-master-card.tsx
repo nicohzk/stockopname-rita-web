@@ -178,6 +178,7 @@ export default function ProductMasterCard({
             data={products}
             addButton={readOnly ? null : <ProductAddButton onSubmit={handleCreate} />}
             error={error}
+            onRetry={() => void loadData()}
             onSearch={setSearchInput}
             searchValue={searchInput}
             page={page}

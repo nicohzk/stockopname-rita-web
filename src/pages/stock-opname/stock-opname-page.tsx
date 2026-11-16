@@ -182,7 +182,7 @@ export default function StockOpnamePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <SessionTable columns={columns} data={sessions} addButton={<SessionAddBtn onCreate={handleCreateSession} onImport={handleImportMaster} onFinished={handleSessionFinished} />} error={error} onSearch={setSearchInput} searchValue={searchInput} loading={loading} page={page} totalPages={totalPages} onPageChange={handlePageChange} />
+          <SessionTable columns={columns} data={sessions} addButton={<SessionAddBtn onCreate={handleCreateSession} onImport={handleImportMaster} onFinished={handleSessionFinished} />} error={error} onRetry={() => void loadSessions()} onSearch={setSearchInput} searchValue={searchInput} loading={loading} page={page} totalPages={totalPages} onPageChange={handlePageChange} />
         </CardContent>
       </Card>
     </div>

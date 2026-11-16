@@ -17,12 +17,15 @@ import {
 import { features, type DataTableFeatures } from "@/lib/data-table-features";
 import { Input } from "@/components/ui/input";
 import { LoadingOverlay } from "@/components/ui/loading";
+import { RetryButton } from "@/components/ui/notice";
 
 interface DataTableProps<TData extends RowData> {
   columns: ColumnDef<DataTableFeatures, TData>[];
   data: TData[];
   addButton: ReactNode;
   error?: string;
+  /** Ditampilkan bersama pesan error supaya pengguna tidak perlu reload halaman. */
+  onRetry?: () => void;
   onSearch?: (value: string) => void;
   page?: number;
   totalPages?: number;
@@ -36,6 +39,7 @@ export function SessionTable<TData extends RowData>({
   data,
   addButton,
   error,
+  onRetry,
   onSearch,
   page,
   totalPages,
@@ -93,7 +97,16 @@ export function SessionTable<TData extends RowData>({
             ))}
           </TableHeader>
           <TableBody>
-            {error ? <TableRow><TableCell colSpan={columns.length} className="text-destructive h-24 text-center">{error}</TableCell></TableRow> : null}
+            {error ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-destructive">{error}</span>
+                    {onRetry ? <RetryButton onRetry={onRetry} retrying={loading} /> : null}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : null}
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id}>

@@ -201,6 +201,7 @@ export default function ProductPage() {
               data={products}
               addButton={null}
               error={productsError}
+              onRetry={() => void loadProducts()}
               onSearch={setSearchInput}
               searchValue={searchInput}
               page={page}
